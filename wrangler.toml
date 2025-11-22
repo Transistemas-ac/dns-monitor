@@ -14,3 +14,10 @@ CF_ZONE_ID = "cf7c2d683422b79b8b1f629ed4707781"
 ZONE_NAME = "transistemas.org"
 MAIL_TO = "equipo@transistemas.org"
 MAIL_FROM = "dns@transistemas.org"
+
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
