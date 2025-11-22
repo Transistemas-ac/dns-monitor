@@ -248,6 +248,8 @@ async function sendEmail(env, subject, body) {
   });
 
   if (!res.ok) {
+    const text = await res.text();
+    console.error("Error al enviar correo:", res.status, text);
     throw new Error(`Error al enviar correo: ${res.status}`);
   }
 }
