@@ -66,7 +66,7 @@ async function runCheck(env) {
   /* ---------- CONDITIONAL EMAIL ---------- */
 
   if (diffDNS?.hasChanges || diffNS !== null) {
-    const subject = `🚨 Cambio detectado en ${env.ZONE_NAME}`;
+    const subject = `🚨 Cambio detectado en DNS de ${env.ZONE_NAME}`;
     const body = buildEmailBody(diffDNS, diffNS, env);
     await sendEmail(env, subject, body);
   }
@@ -224,7 +224,7 @@ function buildEmailBody(diffDNS, diffNS, env) {
     lines.push("");
   }
 
-  lines.push("Monitor automático de Transistemas");
+  lines.push("🚨 Monitor automático de Transistemas 🏳️‍⚧️");
   lines.push("https://github.com/Transistemas/dns-monitor");
 
   return lines.join("\n");
