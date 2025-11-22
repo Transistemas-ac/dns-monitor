@@ -225,7 +225,7 @@ function buildEmailBody(diffDNS, diffNS, env) {
   }
 
   lines.push("🚨 Monitor automático de Transistemas 🏳️‍⚧️");
-  lines.push("https://github.com/Transistemas/dns-monitor");
+  lines.push("https://github.com/Transistemas-ac/dns-monitor");
 
   return lines.join("\n");
 }
