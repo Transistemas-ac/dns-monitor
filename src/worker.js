@@ -25,7 +25,7 @@ async function runCheck(env) {
     return;
   }
 
-  const subject = `Cambio en DNS de ${env.ZONE_NAME || "transistemas.org"}`;
+  const subject = `🚨 Cambio en DNS de ${env.ZONE_NAME || "transistemas.org"}`;
   const body = buildEmailBody(diff, env);
 
   await sendEmail(env, subject, body);
@@ -125,7 +125,7 @@ function buildEmailBody(diff, env) {
   const zoneName = env.ZONE_NAME || "transistemas.org";
   let lines = [];
 
-  lines.push(`Se detectaron cambios en los registros DNS de ${zoneName}.`);
+  lines.push(`Se detectaron cambios en los registros DNS de ${zoneName}`);
   lines.push("");
   lines.push(`Nuevos registros: ${diff.created.length}`);
   lines.push(`Registros eliminados: ${diff.deleted.length}`);
@@ -176,6 +176,7 @@ function buildEmailBody(diff, env) {
   lines.push(
     "Este mensaje fue generado automáticamente por el monitor de DNS."
   );
+  lines.push("https://github.com/Transistemas/dns-monitor");
 
   return lines.join("\n");
 }
