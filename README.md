@@ -13,7 +13,7 @@ Y envía un correo automático a `equipo@transistemas.org` cuando detecta cualqu
 
 ## 🚀 Funcionamiento
 
-1. El Worker se ejecuta cada `*/10 * * * *`.
+1. El Worker se ejecuta cada 10 minutos.
 2. Obtiene los registros DNS internos por API de Cloudflare.
 3. Obtiene los nameservers reales del dominio vía DoH (Cloudflare DNS JSON).
 4. Compara ambos estados con snapshots almacenados en KV.
@@ -27,7 +27,7 @@ Y envía un correo automático a `equipo@transistemas.org` cuando detecta cualqu
 - Cloudflare Workers habilitado
 - Acceso al dominio en Cloudflare
 - Cuenta en **Resend**
-- Dominio verificado en Resend (TXT + DKIM)
+- Dominio verificado en Resend y asociado a Cloudflare
 - Token de Cloudflare con permisos:
   - `Zone → DNS → Read`
   - `Zone → Zone → Read`
@@ -98,7 +98,8 @@ El `.gitignore` evita accidentalmente subir variables, logs o credenciales.
 
 ## 📝 Licencia
 
-MIT. Puedes usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS o errores de delegación de nameservers.
+MIT. 
+Se puede usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS y/o nameservers.
 
 <br>
 
