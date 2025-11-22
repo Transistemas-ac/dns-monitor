@@ -99,4 +99,6 @@ Se puede usar este Worker para monitorear cualquier dominio que necesite alertas
 
 <br>
 
+---
+
 _🌈 Creado con orgullo por el Equipo de Desarrollo de Transistemas ❤_
