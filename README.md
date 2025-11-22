@@ -71,11 +71,7 @@ Crear un registro DNS de prueba:
 - Nombre: `dns-test`
 - Contenido: `test`
 
-Tail para ver logs:
-
-    npx wrangler tail
-
-Deberías recibir un correo en `equipo@transistemas.org`.
+Deberías recibir un correo en `equipo@transistemas.org` en un tiempo máximo de 10 minutos.
 
 <br>
 
