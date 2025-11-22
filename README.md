@@ -1,42 +1,36 @@
-# 👁️ DNS Monitor — Cloudflare Worker  
-### Notificaciones por email ante cualquier cambio en los registros DNS del dominio de Transistemas
+# 👁️ DNS Monitor — Cloudflare Worker
 
-Este proyecto implementa un **Cloudflare Worker con cron** que monitorea los registros DNS del dominio de Transistemas y **envía un email automático** cada vez que detecta:
+### Notificaciones por email ante cualquier cambio en los registros DNS o nameservers del dominio de Transistemas
 
-- creación de un registro  
-- eliminación  
-- modificación en contenido, TTL o estado de proxy
+Este proyecto implementa un **Cloudflare Worker con cron** que monitorea:
 
-Usa:
+- cambios en los registros DNS internos (Cloudflare)
+- cambios en los nameservers reales del dominio (DNS over HTTPS)
 
-- **Cloudflare Workers**  
-- **KV Storage** para snapshots  
-- **Cron Triggers** cada 10 minutos  
-- **Resend** para el envío de correos  
-- **Cloudflare API** para leer los DNS
+Y envía un correo automático a `equipo@transistemas.org` cuando detecta cualquier diferencia.
 
 <br>
 
 ## 🚀 Funcionamiento
 
 1. El Worker se ejecuta cada `*/10 * * * *`.
-2. Obtiene todos los registros DNS de la zona por API.
-3. Los compara con el snapshot previo almacenado en KV.
-4. Si hay cambios, envía un correo a `equipo@transistemas.org`.
-5. Actualiza el snapshot.
-
+2. Obtiene los registros DNS internos por API de Cloudflare.
+3. Obtiene los nameservers reales del dominio vía DoH (Cloudflare DNS JSON).
+4. Compara ambos estados con snapshots almacenados en KV.
+5. Si hay cambios, envía un correo detallado.
+6. Actualiza snapshots.
 
 <br>
 
 ## 🔧 Requisitos previos
 
-- Cloudflare Workers habilitado  
-- Acceso al dominio en Cloudflare  
+- Cloudflare Workers habilitado
+- Acceso al dominio en Cloudflare
 - Cuenta en **Resend**
-- Registro del domino en **Resend**
-- Token de Cloudflare con permisos:  
-  - `Zone → DNS → Read`  
-  - `Zone → Zone → Read`  
+- Dominio verificado en Resend (TXT + DKIM)
+- Token de Cloudflare con permisos:
+  - `Zone → DNS → Read`
+  - `Zone → Zone → Read`
 
 <br>
 
@@ -56,9 +50,9 @@ Configurar los secretos:
 
 Editar `wrangler.toml` con:
 
-- `id` y `preview_id` reales del KV  
-- `CF_ZONE_ID` del dominio  
-- `ZONE_NAME`  
+- `id` y `preview_id` reales del KV
+- `CF_ZONE_ID` del dominio
+- `ZONE_NAME`
 - `MAIL_TO` y `MAIL_FROM`
 
 <br>
@@ -73,8 +67,8 @@ Editar `wrangler.toml` con:
 
 Crear un registro DNS de prueba:
 
-- Tipo: `TXT`  
-- Nombre: `dns-test`  
+- Tipo: `TXT`
+- Nombre: `dns-test`
 - Contenido: `test`
 
 Tail para ver logs:
@@ -104,11 +98,8 @@ El `.gitignore` evita accidentalmente subir variables, logs o credenciales.
 
 ## 📝 Licencia
 
-MIT. Puedes usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS.
+MIT. Puedes usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS o errores de delegación de nameservers.
 
 <br>
 
----
-
 _🌈 Creado con orgullo por el Equipo de Desarrollo de Transistemas ❤_
-

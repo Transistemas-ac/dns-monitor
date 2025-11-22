@@ -7,30 +7,74 @@ export default {
 async function runCheck(env) {
   const zoneId = env.CF_ZONE_ID;
   const apiToken = env.CF_API_TOKEN;
-  const kvKey = `dns_state_${zoneId}`;
+
+  const kvKeyDNS = `dns_state_${zoneId}`;
+  const kvKeyNS = `ns_state_${zoneId}`;
+
+  /* ---------- DNS REGISTERS (internos de Cloudflare) ---------- */
 
   const currentRecords = await fetchAllDnsRecords(zoneId, apiToken);
-  const snapshot = normalizeRecords(currentRecords);
+  const snapshotDNS = normalizeRecords(currentRecords);
 
-  const previousJson = await env.DNS_MONITOR.get(kvKey);
-  if (!previousJson) {
-    await env.DNS_MONITOR.put(kvKey, JSON.stringify(snapshot));
-    return;
+  const previousDNSjson = await env.DNS_MONITOR.get(kvKeyDNS);
+  let diffDNS = null;
+
+  if (!previousDNSjson) {
+    await env.DNS_MONITOR.put(kvKeyDNS, JSON.stringify(snapshotDNS));
+  } else {
+    const previousDNS = JSON.parse(previousDNSjson);
+    diffDNS = diffRecords(previousDNS, snapshotDNS);
+
+    if (diffDNS.hasChanges) {
+      await env.DNS_MONITOR.put(kvKeyDNS, JSON.stringify(snapshotDNS));
+    }
   }
 
-  const previous = JSON.parse(previousJson);
-  const diff = diffRecords(previous, snapshot);
+  /* ---------- NAMESERVERS REALES (DNS externo, DoH) ---------- */
 
-  if (!diff.hasChanges) {
-    return;
+  const nsResponse = await fetch(
+    `https://cloudflare-dns.com/dns-query?name=${env.ZONE_NAME}&type=NS`,
+    {
+      headers: { Accept: "application/dns-json" },
+    }
+  );
+
+  const nsData = await nsResponse.json();
+  const currentNS = (nsData.Answer || [])
+    .filter((a) => a.type === 2)
+    .map((a) => a.data)
+    .sort();
+
+  const previousNSjson = await env.DNS_MONITOR.get(kvKeyNS);
+  let diffNS = null;
+
+  if (!previousNSjson) {
+    await env.DNS_MONITOR.put(kvKeyNS, JSON.stringify(currentNS));
+  } else {
+    const previousNS = JSON.parse(previousNSjson);
+
+    const changed =
+      previousNS.length !== currentNS.length ||
+      previousNS.some((x, i) => x !== currentNS[i]);
+
+    if (changed) {
+      diffNS = { previous: previousNS, current: currentNS };
+      await env.DNS_MONITOR.put(kvKeyNS, JSON.stringify(currentNS));
+    }
   }
 
-  const subject = `🚨 Cambio en DNS de ${env.ZONE_NAME || "transistemas.org"}`;
-  const body = buildEmailBody(diff, env);
+  /* ---------- CONDITIONAL EMAIL ---------- */
 
-  await sendEmail(env, subject, body);
-  await env.DNS_MONITOR.put(kvKey, JSON.stringify(snapshot));
+  if (diffDNS?.hasChanges || diffNS !== null) {
+    const subject = `🚨 Cambio detectado en ${env.ZONE_NAME}`;
+    const body = buildEmailBody(diffDNS, diffNS, env);
+    await sendEmail(env, subject, body);
+  }
 }
+
+/* -------------------------------------------------------------- */
+/* --------------------------- HELPERS --------------------------- */
+/* -------------------------------------------------------------- */
 
 async function fetchAllDnsRecords(zoneId, apiToken) {
   let page = 1;
@@ -54,9 +98,8 @@ async function fetchAllDnsRecords(zoneId, apiToken) {
     all = all.concat(data.result || []);
 
     const info = data.result_info;
-    if (!info || page >= info.total_pages) {
-      break;
-    }
+    if (!info || page >= info.total_pages) break;
+
     page++;
   }
 
@@ -121,61 +164,67 @@ function diffRecords(previous, current) {
   };
 }
 
-function buildEmailBody(diff, env) {
+function buildEmailBody(diffDNS, diffNS, env) {
   const zoneName = env.ZONE_NAME || "transistemas.org";
   let lines = [];
 
-  lines.push(`Se detectaron cambios en los registros DNS de ${zoneName}`);
-  lines.push("");
-  lines.push(`Nuevos registros: ${diff.created.length}`);
-  lines.push(`Registros eliminados: ${diff.deleted.length}`);
-  lines.push(`Registros modificados: ${diff.updated.length}`);
+  lines.push(`Se detectaron cambios en el dominio ${zoneName}`);
   lines.push("");
 
-  if (diff.created.length > 0) {
-    lines.push("Nuevos:");
-    for (const r of diff.created.slice(0, 20)) {
-      lines.push(
-        `+ ${r.type} ${r.name} -> ${r.content} ttl=${r.ttl} proxied=${r.proxied}`
-      );
+  /* DNS records */
+  if (diffDNS?.hasChanges) {
+    lines.push("Cambios en registros DNS internos (Cloudflare)");
+    lines.push("");
+
+    lines.push(`Nuevos: ${diffDNS.created.length}`);
+    lines.push(`Eliminados: ${diffDNS.deleted.length}`);
+    lines.push(`Modificados: ${diffDNS.updated.length}`);
+    lines.push("");
+
+    if (diffDNS.created.length > 0) {
+      lines.push("Nuevos:");
+      for (const r of diffDNS.created.slice(0, 20)) {
+        lines.push(`+ ${r.type} ${r.name} -> ${r.content}`);
+      }
+      lines.push("");
     }
-    if (diff.created.length > 20) {
-      lines.push(`(+ ${diff.created.length - 20} más)`);
+
+    if (diffDNS.deleted.length > 0) {
+      lines.push("Eliminados:");
+      for (const r of diffDNS.deleted.slice(0, 20)) {
+        lines.push(`- ${r.type} ${r.name} -> ${r.content}`);
+      }
+      lines.push("");
     }
+
+    if (diffDNS.updated.length > 0) {
+      lines.push("Modificados:");
+      for (const u of diffDNS.updated.slice(0, 20)) {
+        const b = u.before;
+        const a = u.after;
+        lines.push(`* ${a.type} ${a.name}`);
+        lines.push(`  antes: ${b.content}`);
+        lines.push(`  después: ${a.content}`);
+      }
+      lines.push("");
+    }
+  }
+
+  /* Nameservers externos */
+  if (diffNS) {
+    lines.push("Cambio en nameservers REALES del dominio (DoH)");
+    lines.push("");
+
+    lines.push("Anterior:");
+    for (const x of diffNS.previous) lines.push(`- ${x}`);
+    lines.push("");
+
+    lines.push("Actual:");
+    for (const x of diffNS.current) lines.push(`+ ${x}`);
     lines.push("");
   }
 
-  if (diff.deleted.length > 0) {
-    lines.push("Eliminados:");
-    for (const r of diff.deleted.slice(0, 20)) {
-      lines.push(
-        `- ${r.type} ${r.name} -> ${r.content} ttl=${r.ttl} proxied=${r.proxied}`
-      );
-    }
-    if (diff.deleted.length > 20) {
-      lines.push(`(+ ${diff.deleted.length - 20} más)`);
-    }
-    lines.push("");
-  }
-
-  if (diff.updated.length > 0) {
-    lines.push("Modificados:");
-    for (const u of diff.updated.slice(0, 20)) {
-      const b = u.before;
-      const a = u.after;
-      lines.push(`* ${a.type} ${a.name}`);
-      lines.push(`  antes: ${b.content} ttl=${b.ttl} proxied=${b.proxied}`);
-      lines.push(`  después: ${a.content} ttl=${a.ttl} proxied=${a.proxied}`);
-    }
-    if (diff.updated.length > 20) {
-      lines.push(`(+ ${diff.updated.length - 20} más)`);
-    }
-    lines.push("");
-  }
-
-  lines.push(
-    "Este mensaje fue generado automáticamente por el monitor de DNS."
-  );
+  lines.push("Monitor automático de Transistemas");
   lines.push("https://github.com/Transistemas/dns-monitor");
 
   return lines.join("\n");
