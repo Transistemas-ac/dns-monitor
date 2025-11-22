@@ -1,0 +1,21 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Wrangler / Cloudflare
+.dev.vars
+.env
+.env.*
+.wrangler/
+wrangler-state.json
+wrangler.toml.local
+
+# Logs
+*.log
+logs/
+wrangler-*.log
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,16 @@
+name = "dns-monitor"
+main = "src/worker.js"
+compatibility_date = "2025-11-11"
+
+kv_namespaces = [
+  { binding = "DNS_MONITOR", id = "aca58e031e124d9bb4199129a2b38332", preview_id = "420fd272cb164d61bb21d921384eb566" }
+]
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+CF_ZONE_ID = "cf7c2d683422b79b8b1f629ed4707781"
+ZONE_NAME = "transistemas.org"
+MAIL_TO = "equipo@transistemas.org"
+MAIL_FROM = "dns@transistemas.org"
