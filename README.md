@@ -81,6 +81,24 @@ Deberías recibir un correo en `equipo@transistemas.org` en un tiempo máximo de
 
 <br>
 
+## ⚡ Funciones
+
+- `scheduled(event, env, ctx)`: Punto de entrada del Worker programado; dispara la ejecución periódica de `runCheck` usando el cron configurado. Garantiza que la verificación de DNS corra en background con `ctx.waitUntil`.
+
+- `runCheck(env)`: Orquesta todo el flujo de monitoreo: obtiene DNS internos y nameservers externos, calcula diferencias con el estado previo y decide si debe enviar un correo de alerta.
+
+- `fetchAllDnsRecords(zoneId, apiToken)`: Consulta la API de Cloudflare paginando todos los registros DNS de la zona. Devuelve un array completo con los registros actuales para usarlos como snapshot.
+
+- `normalizeRecords(records)`: Normaliza los registros DNS a un formato reducido y ordenado. Esto permite compararlos de forma determinista entre ejecuciones para detectar cambios reales.
+
+- `diffRecords(previous, current)`: Calcula las diferencias entre el snapshot anterior y el actual, clasificando registros en creados, eliminados y modificados. Expone una marca `hasChanges` para simplificar la lógica de decisión.
+
+- `buildEmailBody(diffDNS, diffNS, env)`: Construye el cuerpo de texto del email de alerta con un resumen legible de todos los cambios detectados. Incluye detalles de registros nuevos, eliminados y modificados, así como cambios en nameservers.
+
+- `sendEmail(env, subject, body)`: Envía el correo de notificación usando la API de Resend. Valida la respuesta HTTP y lanza un error si el envío falla para facilitar el debugging en logs.
+
+<br>
+
 ## 🛡️ Seguridad
 
 Este repositorio **no contiene secretos**.  
@@ -94,7 +112,7 @@ El `.gitignore` evita accidentalmente subir variables, logs o credenciales.
 
 ## 📝 Licencia
 
-MIT. 
+MIT.
 Se puede usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS y/o nameservers.
 
 <br>
