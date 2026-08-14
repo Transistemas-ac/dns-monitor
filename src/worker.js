@@ -10,8 +10,47 @@ export default {
   },
 };
 
+function getDomains(env) {
+  if (!env.DOMAINS) {
+    console.error("DOMAINS var not configured");
+    return [];
+  }
+
+  let domains = env.DOMAINS;
+  if (typeof domains === "string") {
+    domains = JSON.parse(domains);
+  }
+
+  if (!Array.isArray(domains)) {
+    console.error("DOMAINS var must be a JSON array");
+    return [];
+  }
+
+  return domains.filter(
+    (d) =>
+      d &&
+      typeof d === "object" &&
+      d.zoneId &&
+      d.zoneName &&
+      d.mailTo &&
+      d.mailFrom
+  );
+}
+
 async function runCheck(env) {
-  const zoneId = env.CF_ZONE_ID;
+  const domains = getDomains(env);
+
+  for (const domain of domains) {
+    try {
+      await checkDomain(env, domain);
+    } catch (err) {
+      console.error(`Error monitoreando ${domain.zoneName}:`, err);
+    }
+  }
+}
+
+async function checkDomain(env, domain) {
+  const zoneId = domain.zoneId;
   const apiToken = env.CF_API_TOKEN;
 
   const kvKeyDNS = `dns_state_${zoneId}`;
@@ -39,7 +78,7 @@ async function runCheck(env) {
   /* ---------- NAMESERVERS REALES (DNS externo, DoH) ---------- */
 
   const nsResponse = await fetch(
-    `https://cloudflare-dns.com/dns-query?name=${env.ZONE_NAME}&type=NS`,
+    `https://cloudflare-dns.com/dns-query?name=${domain.zoneName}&type=NS`,
     {
       headers: { Accept: "application/dns-json" },
     }
@@ -72,8 +111,13 @@ async function runCheck(env) {
   /* ---------- CONDITIONAL EMAIL ---------- */
 
   if (diffDNS?.hasChanges || diffNS !== null) {
-    const subject = `🚨 Cambio detectado en DNS de ${env.ZONE_NAME}`;
-    const body = buildEmailBody(diffDNS, diffNS, env);
-    await sendEmail(env, subject, body);
+    const subject = `🚨 Cambio detectado en DNS de ${domain.zoneName}`;
+    const body = buildEmailBody(diffDNS, diffNS, domain.zoneName);
+    await sendEmail(env, {
+      from: domain.mailFrom,
+      to: domain.mailTo,
+      subject,
+      body,
+    });
   }
 }

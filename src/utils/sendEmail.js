@@ -1,4 +1,4 @@
-export default async function sendEmail(env, subject, body) {
+export default async function sendEmail(env, { from, to, subject, body }) {
   const apiKey = env.RESEND_API_KEY;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -8,8 +8,8 @@ export default async function sendEmail(env, subject, body) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: env.MAIL_FROM,
-      to: [env.MAIL_TO],
+      from,
+      to: [to],
       subject,
       text: body,
     }),

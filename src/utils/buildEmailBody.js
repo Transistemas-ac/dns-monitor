@@ -1,5 +1,4 @@
-export default function buildEmailBody(diffDNS, diffNS, env) {
-  const zoneName = env.ZONE_NAME || "transistemas.org";
+export default function buildEmailBody(diffDNS, diffNS, zoneName) {
   let lines = [];
 
   lines.push(`Se detectaron cambios en el dominio ${zoneName}`);
@@ -58,8 +57,7 @@ export default function buildEmailBody(diffDNS, diffNS, env) {
     lines.push("");
   }
 
-  lines.push("🚨 Monitor automático de Transistemas 🏳️‍⚧️");
-  lines.push("https://github.com/Transistemas-ac/dns-monitor");
+  lines.push("🚨 Monitor DNS automático");
 
   return lines.join("\n");
 }

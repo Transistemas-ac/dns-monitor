@@ -10,10 +10,16 @@ kv_namespaces = [
 crons = ["*/10 * * * *"]
 
 [vars]
-CF_ZONE_ID = "cf7c2d683422b79b8b1f629ed4707781"
-ZONE_NAME = "transistemas.org"
-MAIL_TO = "equipo@transistemas.org"
-MAIL_FROM = "dns@transistemas.org"
+# Lista de dominios a monitorear (JSON array).
+# ⚠️ Estos valores son un ejemplo para transistemas.org - cambialos por tu propio dominio y tus correos.
+DOMAINS = """[
+  {
+    "zoneId": "cf7c2d683422b79b8b1f629ed4707781",
+    "zoneName": "transistemas.org",
+    "mailTo": "equipo@transistemas.org",
+    "mailFrom": "dns@transistemas.org"
+  }
+]"""
 
 [observability]
 [observability.logs]
