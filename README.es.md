@@ -43,6 +43,12 @@ Y envía un correo automático cuando detecta cualquier diferencia o problema. P
 
 ## ⚙️ Instalación
 
+Clonar el repositorio:
+
+    git clone https://github.com/Transistemas-ac/dns-monitor
+
+Instalar dependencias:
+
     npm install
 
 Crear el namespace de KV:
@@ -55,11 +61,16 @@ Configurar los secretos:
     npx wrangler secret put CF_API_TOKEN
     npx wrangler secret put RESEND_API_KEY
 
-Opcional — watchdog externo (cubre la muerte total del Worker, que el heartbeat interno no puede detectar):
+Opcional — watchdog externo (cubre la muerte total del Worker, que el heartbeat interno no puede detectar). Configuración paso a paso:
 
-    npx wrangler secret put HEALTHCHECKS_URL
+1. Crea una cuenta gratis en [healthchecks.io](https://healthchecks.io) y entrá a **My Checks → Add Check**.
+2. Elegí **"Ping-only"** como tipo de check (sin proyecto, sin almacenamiento).
+3. Configurá el **Period** en `10` minutos y el **Grace** en `1` día (o más, si no querés correos de madrugada). El Worker hace ping al final de cada corrida exitosa; Healthchecks alerta si los pings se detienen.
+4. Copiá la URL de ping del check (ej. `https://hc-ping.com/<uuid>`) y configurala como secreto:
 
-> Crea un check "ping-only" gratis en https://healthchecks.io y usa su URL de ping (ej. `https://hc-ping.com/<uuid>`). El Worker hace ping al final de cada corrida exitosa; Healthchecks alerta si los pings se detienen.
+       npx wrangler secret put HEALTHCHECKS_URL
+
+5. Desplegá y verificá: tras la próxima corrida deberías ver el check actualizado en la lista **Pings**, y actividad del ping en `wrangler tail`. Si el cron muere del todo, Healthchecks manda la alerta.
 
 Editar `wrangler.toml`:
 
@@ -111,6 +122,8 @@ DOMAINS = """[
 ## 🚀 Deploy
 
     npx wrangler deploy
+
+La landing se sirve en **https://dns.transistemas.org** (dominio custom configurado en `wrangler.toml`). El cron (`*/10 * * * *`) corre a la par; desplegás una vez y listo.
 
 <br>
 
