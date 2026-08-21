@@ -32,6 +32,34 @@ And it sends an automatic email when it detects any difference or problem. It ca
 
 <br>
 
+## 🏗️ Architecture
+
+```
+                    ┌─────────┐
+                    │  Cron   │
+                    └────┬────┘
+                         ▼
+┌──────────────┐   ┌──────────────┐      ┌──────────────┐
+│ Cloudflare   │──►│ Check Engine │ ───► │ Snapshot KV  │
+│ DNS / Audit  │   └──────┬───────┘      └──────────────┘
+└──────────────┘          │
+                          │
+               ┌──────────┼───────────┐
+               ▼          ▼           ▼
+             DNS       RDAP/DoH    HTTPS
+               │          │           │
+               └──────────┼───────────┘
+                          ▼
+                   ┌────────────┐
+                   │ Alert      │
+                   │ Engine     │
+                   └─────┬──────┘
+                         ▼
+                      Email
+```
+
+<br>
+
 ## 🔧 Prerequisites
 
 - Cloudflare Workers enabled

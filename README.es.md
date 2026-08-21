@@ -32,6 +32,34 @@ Y envía un correo automático cuando detecta cualquier diferencia o problema. P
 
 <br>
 
+## 🏗️ Arquitectura
+
+```
+                    ┌─────────┐
+                    │  Cron   │
+                    └────┬────┘
+                         ▼
+┌──────────────┐   ┌──────────────┐      ┌──────────────┐
+│ Cloudflare   │──►│ Check Engine │ ───► │ Snapshot KV  │
+│ DNS / Audit  │   └──────┬───────┘      └──────────────┘
+└──────────────┘          │
+                          │
+               ┌──────────┼───────────┐
+               ▼          ▼           ▼
+             DNS       RDAP/DoH    HTTPS
+               │          │           │
+               └──────────┼───────────┘
+                          ▼
+                   ┌────────────┐
+                   │ Alert      │
+                   │ Engine     │
+                   └─────┬──────┘
+                         ▼
+                      Email
+```
+
+<br>
+
 ## 🔧 Requisitos previos
 
 - Cloudflare Workers habilitado
