@@ -9,9 +9,13 @@ Este proyecto implementa un **Cloudflare Worker con cron** que monitorea:
 - cambios en los registros DNS internos (Cloudflare)
 - cambios en los nameservers reales del dominio (DNS over HTTPS)
 - **quién** hizo cada cambio DNS (Audit Logs de Cloudflare)
-- vencimiento del dominio (RDAP, gratis, sin API key)
-- registros de email: **MX, SPF, DMARC, DKIM** (DNS over HTTPS)
+- vencimiento del dominio (RDAP, gratis, sin API key), incluyendo **cambios de registrador** y **estados críticos** (`pendingDelete`, `redemptionPeriod`, `clientHold`)
+- registros de email: **MX, SPF, DMARC, DKIM** (DNS over HTTPS), más el **límite de DNS lookups del SPF** (RFC 7208) y las **direcciones de reporte rua/ruf** del DMARC
 - estado **DNSSEC** (Cloudflare + registros DS públicos)
+- registros **CAA** (*opcional*, `expectCAA`)
+- registro **HTTPS (SVCB)** en el apex
+- **consistencia de nameservers** entre resolvers 1.1.1.1 y 8.8.8.8 (posible secuestro/fragmentación de DNS)
+- **web check** (*opcional*, `expectWeb`): ¿el sitio responde por HTTPS?
 - salud del propio monitor: corridas perdidas y errores recurrentes (heartbeat)
 
 Y envía un correo automático cuando detecta cualquier diferencia o problema. Puede monitorear **múltiples dominios**, cada uno con su propio correo destinatario.
@@ -97,6 +101,8 @@ Formato de `DOMAINS` — por cada dominio:
 | `expectSPF`       | *(opcional)* Verificar SPF. Default: `true`                                       |
 | `expectDMARC`     | *(opcional)* Verificar DMARC. Default: `true`                                     |
 | `expectDKIM`      | *(opcional)* Verificar DKIM. Default: `true`                                      |
+| `expectCAA`       | *(opcional)* Alertar si no hay registros CAA. Default: `false`                    |
+| `expectWeb`       | *(opcional)* Verificar que el sitio responda por HTTPS. Default: `false`          |
 
 Ejemplo con dos dominios (JSON multilinea con comillas triples `"""`):
 
@@ -175,11 +181,19 @@ Para disparar el cron manualmente en desarrollo:
 
 - `recordDomainError(env, domain)` / `clearDomainError(env, domain)`: Llevan un contador de errores consecutivos por dominio en KV. Alerta al llegar a 3 (y cada 3 corridas siguientes); avisa "Dominio recuperado" cuando vuelve a funcionar.
 
-- `checkDomainExpiry(env, domain)`: Consulta RDAP (`rdap.org/domain/...`) para obtener la fecha de expiración real del dominio y alerta al cruzar cada umbral de `expiryAlertDays`. Detecta renovaciones y avisa cuando la fecha cambia con una alerta activa.
+- `checkDomainExpiry(env, domain)`: Consulta RDAP (`rdap.org/domain/...`) para obtener la fecha de expiración real del dominio y alerta al cruzar cada umbral de `expiryAlertDays`. Detecta renovaciones y avisa cuando la fecha cambia con una alerta activa. También alerta cuando **cambia el registrador** y cuando aparecen **estados críticos** (`pendingDelete`, `redemptionPeriod`, `clientHold`).
 
-- `checkEmailRecords(env, domain)`: Verifica vía DoH los registros MX, SPF (faltante/duplicado/sin `all`), DMARC (faltante/`p=none`/duplicado) y DKIM (selectores comunes). Alerta **solo cuando el estado cambia** respecto al snapshot en KV, no cada día.
+- `checkEmailRecords(env, domain)`: Verifica vía DoH los registros MX, SPF (faltante/duplicado/sin `all`/más de 10 DNS lookups según RFC 7208), DMARC (faltante/`p=none`/duplicado/sin `rua`/`ruf`) y DKIM (selectores comunes). Alerta **solo cuando el estado cambia** respecto al snapshot en KV, no cada día.
 
 - `checkDnssec(env, domain)`: Compara el estado DNSSEC de Cloudflare (`active/pending/disabled` + DS esperado) con los registros DS públicos vía DoH. Detecta DS no propagado, DS huérfano y mismatch de DS.
+
+- `checkCaa(env, domain)`: Consulta los registros CAA (tipo 257) vía DoH y alerta ante cambios. Con `expectCAA: true`, avisa una vez si no existen registros CAA.
+
+- `checkWeb(env, domain)`: Con `expectWeb: true`, hace fetch a `https://<dominio>` (timeout 15 s) y alerta cuando el sitio deja/resume de responder o cambia su estado HTTP.
+
+- `checkNsConsistency(env, domain)`: Compara los registros NS devueltos por 1.1.1.1 (Cloudflare) y 8.8.8.8 (Google) y alerta si los resolvers no coinciden — posible secuestro o fragmentación de DNS.
+
+- `checkHttpsRecord(env, domain)`: Sigue el registro HTTPS (SVCB, tipo 65) del apex vía DoH y alerta ante cambios.
 
 - `dohQuery(name, type)`: Helper de consultas DNS sobre HTTPS (Cloudflare DNS JSON) usado por los checks de nameservers, email y DNSSEC.
 

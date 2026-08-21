@@ -6,6 +6,10 @@ import dohQuery from "./utils/dohQuery.js";
 import checkDomainExpiry from "./utils/checkDomainExpiry.js";
 import checkEmailRecords from "./utils/checkEmailRecords.js";
 import checkDnssec from "./utils/checkDnssec.js";
+import checkCaa from "./utils/checkCaa.js";
+import checkWeb from "./utils/checkWeb.js";
+import checkNsConsistency from "./utils/checkNsConsistency.js";
+import checkHttpsRecord from "./utils/checkHttpsRecord.js";
 import fetchAuditLogs from "./utils/fetchAuditLogs.js";
 import {
   checkMissedRuns,
@@ -179,6 +183,10 @@ async function checkDomain(env, domain) {
     [`last_expiry_ts_${zoneId}`, checkDomainExpiry],
     [`last_email_ts_${zoneId}`, checkEmailRecords],
     [`last_dnssec_ts_${zoneId}`, checkDnssec],
+    [`last_caa_ts_${zoneId}`, checkCaa],
+    [`last_web_ts_${zoneId}`, checkWeb],
+    [`last_nscons_ts_${zoneId}`, checkNsConsistency],
+    [`last_https_ts_${zoneId}`, checkHttpsRecord],
   ];
 
   for (const [key, checkFn] of dailyChecks) {

@@ -39,8 +39,22 @@ export default async function checkEmailRecords(env, domain) {
         issues.push({ level: "error", label: "SPF", detail: "No se encontró registro SPF (v=spf1)" });
       } else if (spf.length > 1) {
         issues.push({ level: "error", label: "SPF", detail: `SPF duplicado: ${spf.length} registros v=spf1` });
-      } else if (!/(^|\s)-?~?all(\s|$)/.test(spf[0])) {
-        issues.push({ level: "warn", label: "SPF", detail: "SPF sin mecanismo all al final (recomendado ~all o -all)" });
+      } else {
+        if (!/(^|\s)-?~?all(\s|$)/.test(spf[0])) {
+          issues.push({ level: "warn", label: "SPF", detail: "SPF sin mecanismo all al final (recomendado ~all o -all)" });
+        }
+
+        const isLookup = (t) =>
+          t.startsWith("include:") ||
+          t.startsWith("redirect=") ||
+          t === "a" || t.startsWith("a:") || t.startsWith("a/") ||
+          t === "mx" || t.startsWith("mx:") || t.startsWith("mx/") ||
+          t === "ptr" || t.startsWith("ptr:");
+        const tokens = spf[0].split(/\s+/).filter(Boolean);
+        const lookups = 1 + tokens.filter(isLookup).length;
+        if (lookups > 10) {
+          issues.push({ level: "error", label: "SPF", detail: `SPF con ${lookups} DNS lookups (máx. 10 según RFC 7208)` });
+        }
       }
     }
 
@@ -55,6 +69,9 @@ export default async function checkEmailRecords(env, domain) {
         issues.push({ level: "error", label: "DMARC", detail: "DMARC sin política p=" });
       } else if (/\bp=none\b/.test(records[0])) {
         issues.push({ level: "warn", label: "DMARC", detail: "DMARC con p=none (solo monitoreo, sin enforcement)" });
+      }
+      if (!/\brua=/.test(records[0]) && !/\bruf=/.test(records[0])) {
+        issues.push({ level: "warn", label: "DMARC", detail: "DMARC sin rua/ruf (no hay reportes de agregados ni fallas)" });
       }
     }
 

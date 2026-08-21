@@ -9,9 +9,13 @@ This project implements a **Cloudflare Worker with cron** that monitors:
 - changes in the internal DNS records (Cloudflare)
 - changes in the real domain nameservers (DNS over HTTPS)
 - **who** made each DNS change (Cloudflare Audit Logs)
-- domain expiration (RDAP, free, no API key)
-- email records: **MX, SPF, DMARC, DKIM** (DNS over HTTPS)
+- domain expiration (RDAP, free, no API key), including **registrar changes** and **critical statuses** (`pendingDelete`, `redemptionPeriod`, `clientHold`)
+- email records: **MX, SPF, DMARC, DKIM** (DNS over HTTPS), plus **SPF DNS lookup limit** (RFC 7208) and **DMARC rua/ruf** report addresses
 - **DNSSEC** status (Cloudflare + public DS records)
+- **CAA** records (*optional*, `expectCAA`)
+- **HTTPS (SVCB)** record in the apex
+- **nameserver consistency** between resolvers 1.1.1.1 and 8.8.8.8 (possible DNS hijacking/fragmentation)
+- **web check** (*optional*, `expectWeb`): is the site actually responding over HTTPS?
 - monitor health: missed runs and recurring errors (heartbeat)
 
 And it sends an automatic email when it detects any difference or problem. It can monitor **multiple domains**, each with its own recipient email.
@@ -95,8 +99,10 @@ Edit `wrangler.toml`:
 | `expiryAlertDays`| *(optional)* Day thresholds to alert expiry. Default: `[60, 30, 14, 7, 1]`       |
 | `expectMX`       | *(optional)* Verify MX. Default: `true`                                         |
 | `expectSPF`      | *(optional)* Verify SPF. Default: `true`                                        |
-| `expectDMARC`    | *(optional)* Verify DMARC. Default: `true`                                      |
-| `expectDKIM`     | *(optional)* Verify DKIM. Default: `true`                                       |
+| `expectDMARC`     | *(optional)* Verify DMARC. Default: `true`                                      |
+| `expectDKIM`      | *(optional)* Verify DKIM. Default: `true`                                      |
+| `expectCAA`       | *(optional)* Warn if no CAA records exist. Default: `false`                    |
+| `expectWeb`       | *(optional)* Check the site responds over HTTPS. Default: `false`              |
 
 Example with two domains (multiline JSON with triple quotes `"""`):
 
@@ -175,11 +181,19 @@ To trigger the cron manually in development:
 
 - `recordDomainError(env, domain)` / `clearDomainError(env, domain)`: Keep a consecutive-error counter per domain in KV. Alerts at 3 errors (and every 3 following runs); reports "Domain recovered" when it works again.
 
-- `checkDomainExpiry(env, domain)`: Queries RDAP (`rdap.org/domain/...`) for the real domain expiration date and alerts when crossing each `expiryAlertDays` threshold. Detects renewals and reports when the date changes with an active alert.
+- `checkDomainExpiry(env, domain)`: Queries RDAP (`rdap.org/domain/...`) for the real domain expiration date and alerts when crossing each `expiryAlertDays` threshold. Detects renewals and reports when the date changes with an active alert. Also alerts when the **registrar changes** and when critical statuses appear (`pendingDelete`, `redemptionPeriod`, `clientHold`).
 
-- `checkEmailRecords(env, domain)`: Verifies via DoH the MX, SPF (missing/duplicate/without `all`), DMARC (missing/`p=none`/duplicate) and DKIM (common selectors) records. Alerts **only when the status changes** compared to the KV snapshot, not every day.
+- `checkEmailRecords(env, domain)`: Verifies via DoH the MX, SPF (missing/duplicate/without `all`/more than 10 DNS lookups per RFC 7208), DMARC (missing/`p=none`/duplicate/without `rua`/`ruf`) and DKIM (common selectors) records. Alerts **only when the status changes** compared to the KV snapshot, not every day.
 
 - `checkDnssec(env, domain)`: Compares the Cloudflare DNSSEC status (`active/pending/disabled` + expected DS) with the public DS records via DoH. Detects unpropagated DS, orphan DS and DS mismatch.
+
+- `checkCaa(env, domain)`: Queries the CAA records (type 257) via DoH and alerts on changes. With `expectCAA: true`, warns once if no CAA records exist.
+
+- `checkWeb(env, domain)`: With `expectWeb: true`, fetches `https://<domain>` (15 s timeout) and alerts when the site starts/stops responding or changes HTTP status.
+
+- `checkNsConsistency(env, domain)`: Compares the NS records returned by 1.1.1.1 (Cloudflare) and 8.8.8.8 (Google) and alerts if the resolvers disagree — possible DNS hijacking or fragmentation.
+
+- `checkHttpsRecord(env, domain)`: Tracks the HTTPS (SVCB, type 65) record in the apex via DoH and alerts on changes.
 
 - `dohQuery(name, type)`: DNS-over-HTTPS query helper (Cloudflare DNS JSON) used by the nameserver, email and DNSSEC checks.
 

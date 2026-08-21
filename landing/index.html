@@ -33,7 +33,7 @@
         </div>
         <div class="badges">
           <span class="badge">⏱️ Cron cada 10 min</span>
-          <span class="badge">🌈 7 tipos de check</span>
+          <span class="badge">🌈 11 tipos de check</span>
           <span class="badge">📧 Alertas por email</span>
           <span class="badge">🌍 Multi-dominio</span>
         </div>
@@ -89,7 +89,8 @@
             <div class="body">
               Consulta la fecha real de expiración vía RDAP (gratis, sin API
               key) y te alerta a los 60, 30, 14, 7 y 1 día. Detecta
-              renovaciones.
+              renovaciones, <strong>cambios de registrador</strong> y estados
+              críticos (pendingDelete, redemptionPeriod, clientHold).
             </div>
           </article>
 
@@ -100,8 +101,8 @@
             </div>
             <div class="body">
               Verifica MX, SPF, DMARC y DKIM. Alerta solo cuando el estado
-              cambia: sin SPF, DMARC en p=none, registros duplicados, selectores
-              faltantes.
+              cambia: sin SPF, más de 10 DNS lookups (RFC 7208), DMARC en
+              p=none, sin rua/ruf, registros duplicados, selectores faltantes.
             </div>
           </article>
 
@@ -138,6 +139,54 @@
               Cada dominio tiene su destinatario. Si hay novedades, llega un
               correo combinado con todas las secciones afectadas. Nada de spam
               diario.
+            </div>
+          </article>
+
+          <article class="feature-card purple">
+            <div class="head">
+              <span class="emoji">🛡️</span>
+              <h3>CAA records</h3>
+            </div>
+            <div class="body">
+              Detecta cambios en los registros CAA (quién puede emitir
+              certificados para tu dominio). Opcional: aviso único si no hay
+              CAA con <code>expectCAA: true</code>.
+            </div>
+          </article>
+
+          <article class="feature-card blue">
+            <div class="head">
+              <span class="emoji">🧭</span>
+              <h3>Nameservers consistentes</h3>
+            </div>
+            <div class="body">
+              Compara las respuestas NS de 1.1.1.1 (Cloudflare) y 8.8.8.8
+              (Google). Si no coinciden, algo raro está pasando con tu DNS:
+              posible secuestro o fragmentación.
+            </div>
+          </article>
+
+          <article class="feature-card yellow">
+            <div class="head">
+              <span class="emoji">⚡</span>
+              <h3>Registro HTTPS (SVCB)</h3>
+            </div>
+            <div class="body">
+              Sigue el registro HTTPS (tipo 65) del apex: señal de adopción de
+              HTTP/3 y parados de conexión. Alerta ante cualquier cambio o
+              desaparición.
+            </div>
+          </article>
+
+          <article class="feature-card green">
+            <div class="head">
+              <span class="emoji">🌐</span>
+              <h3>Web check (opcional)</h3>
+            </div>
+            <div class="body">
+              Con <code>expectWeb: true</code>, verifica que tu sitio responda
+              por HTTPS (timeout 15 s) y avisa si se cae o cambia su estado
+              HTTP. Sin API keys, solo un fetch por corrida.
             </div>
           </article>
         </div>
