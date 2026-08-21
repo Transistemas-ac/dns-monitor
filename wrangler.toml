@@ -12,14 +12,24 @@ crons = ["*/10 * * * *"]
 [vars]
 # Lista de dominios a monitorear (JSON array).
 # ⚠️ Estos valores son un ejemplo para transistemas.org - cambialos por tu propio dominio y tus correos.
+# Todos los campos excepto zoneId/zoneName/mailTo/mailFrom son opcionales.
 DOMAINS = """[
   {
     "zoneId": "cf7c2d683422b79b8b1f629ed4707781",
     "zoneName": "transistemas.org",
     "mailTo": "equipo@transistemas.org",
-    "mailFrom": "dns@transistemas.org"
+    "mailFrom": "dns@transistemas.org",
+    "expiryAlertDays": [60, 30, 14, 7, 1],
+    "expectMX": true,
+    "expectSPF": true,
+    "expectDMARC": true,
+    "expectDKIM": true
   }
 ]"""
+
+# Opcional: URL de ping de Healthchecks.io (watchdog externo del monitor)
+# Se configura como secreto con: npx wrangler secret put HEALTHCHECKS_URL
+# Ejemplo: https://hc-ping.com/<uuid>
 
 [observability]
 [observability.logs]

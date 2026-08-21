@@ -1,70 +1,88 @@
 # 👁️ DNS Monitor - Cloudflare Worker
 
-### Notificaciones por email ante cualquier cambio en los registros DNS o nameservers de uno o más dominios
+> 🇬🇧 English | 🇪🇸 [Español](README.es.md)
 
-Este proyecto implementa un **Cloudflare Worker con cron** que monitorea:
+### Domain monitoring with email alerts: DNS changes, nameservers, expiry, email records, DNSSEC and monitor health
 
-- cambios en los registros DNS internos (Cloudflare)
-- cambios en los nameservers reales del dominio (DNS over HTTPS)
+This project implements a **Cloudflare Worker with cron** that monitors:
 
-Y envía un correo automático cuando detecta cualquier diferencia. Puede monitorear **múltiples dominios**, cada uno con su propio correo destinatario.
+- changes in the internal DNS records (Cloudflare)
+- changes in the real domain nameservers (DNS over HTTPS)
+- **who** made each DNS change (Cloudflare Audit Logs)
+- domain expiration (RDAP, free, no API key)
+- email records: **MX, SPF, DMARC, DKIM** (DNS over HTTPS)
+- **DNSSEC** status (Cloudflare + public DS records)
+- monitor health: missed runs and recurring errors (heartbeat)
 
-<br>
-
-## 🚀 Funcionamiento
-
-1. El Worker se ejecuta cada 10 minutos.
-2. Obtiene los registros DNS internos por API de Cloudflare.
-3. Obtiene los nameservers reales de cada dominio vía DoH (Cloudflare DNS JSON).
-4. Compara ambos estados con snapshots almacenados en KV.
-5. Si hay cambios, envía un correo detallado.
-6. Actualiza snapshots.
+And it sends an automatic email when it detects any difference or problem. It can monitor **multiple domains**, each with its own recipient email.
 
 <br>
 
-## 🔧 Requisitos previos
+## 🚀 How it works
 
-- Cloudflare Workers habilitado
-- Acceso a los dominios a monitorear en Cloudflare
-- Cuenta en **Resend**
-- Dominio(s) verificados en Resend (el remitente `mailFrom` debe estar verificado)
-- Token de Cloudflare con permisos sobre **todas** las zonas a monitorear:
+1. The Worker runs every 10 minutes.
+2. It fetches the internal DNS records via the Cloudflare API and the real nameservers via DoH, and compares them with snapshots in KV. If there are changes, it attaches who made them by querying the Cloudflare Audit Logs.
+3. The status checks (expiry, email records, DNSSEC) run **once per day** (freshness controlled by timestamps in KV).
+4. The heartbeat detects missed cron runs and recurring errors per domain.
+5. If there is anything new, it sends a combined email with all the domain's sections.
+
+<br>
+
+## 🔧 Prerequisites
+
+- Cloudflare Workers enabled
+- Access to the domains to monitor in Cloudflare
+- A **Resend** account
+- Domain(s) verified in Resend (the `mailFrom` sender must be verified)
+- Cloudflare token with permissions over **all** zones to monitor:
   - `Zone → DNS → Read`
   - `Zone → Zone → Read`
+  - `Zone → Logs → Read` (required for the "Who changed it" section; if missing, it is skipped without breaking the rest)
 
 <br>
 
-## ⚙️ Instalación
+## ⚙️ Installation
 
     npm install
 
-Crear el namespace de KV:
+Create the KV namespace:
 
     npx wrangler kv namespace create DNS_MONITOR
     npx wrangler kv namespace create DNS_MONITOR --preview
 
-Configurar los secretos:
+Configure the secrets:
 
     npx wrangler secret put CF_API_TOKEN
     npx wrangler secret put RESEND_API_KEY
 
-Editar `wrangler.toml`:
+Optional — external watchdog (covers the total death of the Worker, which the internal heartbeat cannot detect):
 
-- `id` y `preview_id` reales del KV
-- la variable `DOMAINS` con la lista de dominios a monitorear (JSON array)
+    npx wrangler secret put HEALTHCHECKS_URL
 
-> ⚠️ **Importante:** la variable `DOMAINS` viene configurada por defecto con los valores de **transistemas.org** como ejemplo. Debes reemplazarla con **tu propio dominio** y **tus propios correos** antes de desplegar.
+> Create a free "ping-only" check at https://healthchecks.io and use its ping URL (e.g. `https://hc-ping.com/<uuid>`). The Worker pings at the end of every successful run; Healthchecks alerts if the pings stop.
 
-Formato de `DOMAINS` — por cada dominio:
+Edit `wrangler.toml`:
 
-| Campo      | Descripción                                           |
-| ---------- | ----------------------------------------------------- |
-| `zoneId`   | ID de la zona en Cloudflare                           |
-| `zoneName` | El dominio a monitorear                               |
-| `mailTo`   | Destinatario de las alertas                           |
-| `mailFrom` | Remitente (debe estar verificado en tu cuenta Resend) |
+- the real `id` and `preview_id` of the KV
+- the `DOMAINS` variable with the list of domains to monitor (JSON array)
 
-Ejemplo con dos dominios (JSON multilinea con comillas triples `"""`):
+> ⚠️ **Important:** the `DOMAINS` variable comes preconfigured with the values of **transistemas.org** as an example. You must replace it with **your own domain** and **your own emails** before deploying.
+
+`DOMAINS` format — per domain:
+
+| Field            | Description                                                                     |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `zoneId`         | Zone ID in Cloudflare                                                           |
+| `zoneName`       | The domain to monitor                                                           |
+| `mailTo`         | Alert recipient                                                                 |
+| `mailFrom`       | Sender (must be verified in your Resend account)                                |
+| `expiryAlertDays`| *(optional)* Day thresholds to alert expiry. Default: `[60, 30, 14, 7, 1]`       |
+| `expectMX`       | *(optional)* Verify MX. Default: `true`                                         |
+| `expectSPF`      | *(optional)* Verify SPF. Default: `true`                                        |
+| `expectDMARC`    | *(optional)* Verify DMARC. Default: `true`                                      |
+| `expectDKIM`     | *(optional)* Verify DKIM. Default: `true`                                       |
+
+Example with two domains (multiline JSON with triple quotes `"""`):
 
 ```toml
 [vars]
@@ -79,12 +97,14 @@ DOMAINS = """[
     "zoneId": "<ZONE_ID_2>",
     "zoneName": "example.org",
     "mailTo": "ops@example.org",
-    "mailFrom": "dns@example.org"
+    "mailFrom": "dns@example.org",
+    "expiryAlertDays": [30, 14, 7],
+    "expectDKIM": false
   }
 ]"""
 ```
 
-> Nota: `mailFrom` no tiene que pertenecer al dominio monitoreado, pero sí debe ser un remitente verificado en tu cuenta de Resend.
+> Note: `mailFrom` doesn't have to belong to the monitored domain, but it must be a verified sender in your Resend account.
 
 <br>
 
@@ -94,15 +114,22 @@ DOMAINS = """[
 
 <br>
 
-## 🧪 Prueba rápida
+## 🧪 Quick test
 
-Crear un registro DNS de prueba en cualquiera de los dominios monitoreados:
+Create a test DNS record in any of the monitored domains:
 
-- Tipo: `TXT`
-- Nombre: `dns-test`
-- Contenido: `test`
+- Type: `TXT`
+- Name: `dns-test`
+- Content: `test`
 
-Deberías recibir un correo en el `mailTo` configurado para ese dominio en un tiempo máximo de 10 minutos.
+You should receive an email at the configured `mailTo` for that domain within 10 minutes, including the "Who changed it" section (if the token has `Zone → Logs → Read`).
+
+To trigger the cron manually in development:
+
+    npx wrangler dev --test-scheduled
+    curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
+
+> The daily checks (expiry, email, DNSSEC) run once every 24 h. To force them on the first deploy, delete the keys `last_expiry_ts_<zoneId>`, `last_email_ts_<zoneId>` and `last_dnssec_ts_<zoneId>` from the KV (or just wait for the first daily run).
 
 <br>
 
@@ -112,46 +139,62 @@ Deberías recibir un correo en el `mailTo` configurado para ese dominio en un ti
 
 <br>
 
-## ⚡ Funciones
+## ⚡ Functions
 
-- `scheduled(event, env, ctx)`: Punto de entrada del Worker programado; dispara la ejecución periódica de `runCheck` usando el cron configurado. Garantiza que la verificación de DNS corra en background con `ctx.waitUntil`.
+- `scheduled(event, env, ctx)`: Entry point of the scheduled Worker; triggers the periodic execution of `runCheck` using the configured cron. Ensures the check runs in the background with `ctx.waitUntil`.
 
-- `runCheck(env)`: Lee la lista de dominios desde `DOMAINS` y ejecuta el chequeo de cada uno. Si un dominio falla, el error se registra en logs y el resto continúa.
+- `runCheck(env)`: Orchestrates the full run: missed-run heartbeat, per-domain check, error recovery, Healthchecks.io ping and global alert sending. If a domain fails, the error is logged and the rest continues.
 
-- `getDomains(env)`: Parsea y valida la variable `DOMAINS` (acepta JSON string o array ya parseado) y devuelve la lista de dominios con `zoneId`, `zoneName`, `mailTo` y `mailFrom`.
+- `getDomains(env)`: Reads and validates the `DOMAINS` variable (accepts a JSON string or an already parsed array) and returns the list of domains.
 
-- `checkDomain(env, domain)`: Orquesta el flujo de monitoreo de un solo dominio: obtiene DNS internos y nameservers externos, calcula diferencias con el estado previo y decide si debe enviar un correo de alerta.
+- `checkDomain(env, domain)`: Orchestrates the flow of a single domain: internal DNS, external nameservers, audit logs (if there was a DNS diff) and the daily checks with freshness control via KV timestamps. Returns the domain's alert sections.
 
-- `fetchAllDnsRecords(zoneId, apiToken)`: Consulta la API de Cloudflare paginando todos los registros DNS de la zona. Devuelve un array completo con los registros actuales para usarlos como snapshot.
+- `fetchAuditSection(env, domain)`: Queries the zone Audit Logs from the cursor stored in KV, filters `dns_record.*` events and extracts the `email`, `action` and `date` of each author. Advances the cursor only if the query was successful; on 403 (missing permission) it is skipped without breaking the flow.
 
-- `normalizeRecords(records)`: Normaliza los registros DNS a un formato reducido y ordenado. Esto permite compararlos de forma determinista entre ejecuciones para detectar cambios reales.
+- `checkMissedRuns(env)`: Internal heartbeat. Stores `last_run_ts` in KV and, if the previous run is more than 25 min old, generates a "missed runs" alert (covers silent cron failures).
 
-- `diffRecords(previous, current)`: Calcula las diferencias entre el snapshot anterior y el actual, clasificando registros en creados, eliminados y modificados. Expone una marca `hasChanges` para simplificar la lógica de decisión.
+- `pingHealthchecks(env)`: Pings `HEALTHCHECKS_URL` (if configured) at the end of every successful run — external watchdog that covers the total death of the Worker.
 
-- `buildEmailBody(diffDNS, diffNS, zoneName)`: Construye el cuerpo de texto del email de alerta con un resumen legible de todos los cambios detectados. Incluye detalles de registros nuevos, eliminados y modificados, así como cambios en nameservers.
+- `recordDomainError(env, domain)` / `clearDomainError(env, domain)`: Keep a consecutive-error counter per domain in KV. Alerts at 3 errors (and every 3 following runs); reports "Domain recovered" when it works again.
 
-- `sendEmail(env, { from, to, subject, body })`: Envía el correo de notificación usando la API de Resend. Valida la respuesta HTTP y lanza un error si el envío falla para facilitar el debugging en logs.
+- `checkDomainExpiry(env, domain)`: Queries RDAP (`rdap.org/domain/...`) for the real domain expiration date and alerts when crossing each `expiryAlertDays` threshold. Detects renewals and reports when the date changes with an active alert.
+
+- `checkEmailRecords(env, domain)`: Verifies via DoH the MX, SPF (missing/duplicate/without `all`), DMARC (missing/`p=none`/duplicate) and DKIM (common selectors) records. Alerts **only when the status changes** compared to the KV snapshot, not every day.
+
+- `checkDnssec(env, domain)`: Compares the Cloudflare DNSSEC status (`active/pending/disabled` + expected DS) with the public DS records via DoH. Detects unpropagated DS, orphan DS and DS mismatch.
+
+- `dohQuery(name, type)`: DNS-over-HTTPS query helper (Cloudflare DNS JSON) used by the nameserver, email and DNSSEC checks.
+
+- `fetchAllDnsRecords(zoneId, apiToken)`: Queries the Cloudflare API paginating over all the zone's DNS records.
+
+- `normalizeRecords(records)`: Normalizes the DNS records to a reduced and sorted format to compare them deterministically.
+
+- `diffRecords(previous, current)`: Computes the differences between snapshots (created, deleted, modified) and exposes `hasChanges`.
+
+- `buildEmailBody(zoneName, sections)`: Builds the email body from generic sections `{title, lines}` (DNS diff, NS diff, expiry, email, DNSSEC, audit, heartbeat).
+
+- `sendEmail(env, { from, to, subject, body })`: Sends the notification email using the Resend API.
 
 <br>
 
-## 🛡️ Seguridad
+## 🛡️ Security
 
-Este repositorio **no contiene secretos**.  
-Los tokens se manejan exclusivamente con:
+This repository **contains no secrets**.  
+Tokens are managed exclusively with:
 
     npx wrangler secret put ...
 
-El `.gitignore` evita accidentalmente subir variables, logs o credenciales.
+The `.gitignore` prevents accidentally uploading variables, logs or credentials.
 
 <br>
 
-## 📝 Licencia
+## 📝 License
 
 MIT.
-Se puede usar este Worker para monitorear cualquier dominio que necesite alertas por cambios DNS y/o nameservers.
+You can use this Worker to monitor any domain: DNS changes, nameservers, expiry, email records, DNSSEC and monitor health.
 
 <br>
 
 ---
 
-_🌈 Creado con orgullo por el Equipo de Desarrollo de Transistemas ❤_
+_🌈 Created with pride by the Transistemas Development Team ❤_
