@@ -1,8 +1,8 @@
-# 👁️ DNS Monitor - Cloudflare Worker
+# 🛰️ DNS Monitor - Cloudflare Worker
 
 > 🇪🇸 Español | 🇬🇧 [English](README.md)
 
-### Monitor de dominios con alertas por email: cambios DNS, nameservers, vencimiento, registros de email, DNSSEC y salud del propio monitor
+### 🛰️ Monitor de dominios e infraestructura con alertas por email: detecta cambios en DNS, nameservers, registrador, DNSSEC, certificados, configuración de email, disponibilidad web y salud del monitor.
 
 Este proyecto implementa un **Cloudflare Worker con cron** que monitorea:
 
@@ -12,10 +12,10 @@ Este proyecto implementa un **Cloudflare Worker con cron** que monitorea:
 - vencimiento del dominio (RDAP, gratis, sin API key), incluyendo **cambios de registrador** y **estados críticos** (`pendingDelete`, `redemptionPeriod`, `clientHold`)
 - registros de email: **MX, SPF, DMARC, DKIM** (DNS over HTTPS), más el **límite de DNS lookups del SPF** (RFC 7208) y las **direcciones de reporte rua/ruf** del DMARC
 - estado **DNSSEC** (Cloudflare + registros DS públicos)
-- registros **CAA** (*opcional*, `expectCAA`)
+- registros **CAA** (_opcional_, `expectCAA`)
 - registro **HTTPS (SVCB)** en el apex
 - **consistencia de nameservers** entre resolvers 1.1.1.1 y 8.8.8.8 (posible secuestro/fragmentación de DNS)
-- **web check** (*opcional*, `expectWeb`): ¿el sitio responde por HTTPS?
+- **web check** (_opcional_, `expectWeb`): ¿el sitio responde por HTTPS?
 - salud del propio monitor: corridas perdidas y errores recurrentes (heartbeat)
 
 Y envía un correo automático cuando detecta cualquier diferencia o problema. Puede monitorear **múltiples dominios**, cada uno con su propio correo destinatario.
@@ -77,7 +77,7 @@ Opcional — watchdog externo (cubre la muerte total del Worker, que el heartbea
 3. Configurá el **Period** en `10` minutos y el **Grace** en `1` día (o más, si no querés correos de madrugada). El Worker hace ping al final de cada corrida exitosa; Healthchecks alerta si los pings se detienen.
 4. Copiá la URL de ping del check (ej. `https://hc-ping.com/<uuid>`) y configurala como secreto:
 
-       npx wrangler secret put HEALTHCHECKS_URL
+   npx wrangler secret put HEALTHCHECKS_URL
 
 5. Desplegá y verificá: tras la próxima corrida deberías ver el check actualizado en la lista **Pings**, y actividad del ping en `wrangler tail`. Si el cron muere del todo, Healthchecks manda la alerta.
 
@@ -90,19 +90,19 @@ Editar `wrangler.toml`:
 
 Formato de `DOMAINS` — por cada dominio:
 
-| Campo             | Descripción                                                                       |
-| ----------------- | --------------------------------------------------------------------------------- |
-| `zoneId`          | ID de la zona en Cloudflare                                                       |
-| `zoneName`        | El dominio a monitorear                                                           |
-| `mailTo`          | Destinatario de las alertas                                                       |
-| `mailFrom`        | Remitente (debe estar verificado en tu cuenta Resend)                             |
-| `expiryAlertDays` | *(opcional)* Umbrales de días para alertar vencimiento. Default: `[60, 30, 14, 7, 1]` |
-| `expectMX`        | *(opcional)* Verificar MX. Default: `true`                                        |
-| `expectSPF`       | *(opcional)* Verificar SPF. Default: `true`                                       |
-| `expectDMARC`     | *(opcional)* Verificar DMARC. Default: `true`                                     |
-| `expectDKIM`      | *(opcional)* Verificar DKIM. Default: `true`                                      |
-| `expectCAA`       | *(opcional)* Alertar si no hay registros CAA. Default: `false`                    |
-| `expectWeb`       | *(opcional)* Verificar que el sitio responda por HTTPS. Default: `false`          |
+| Campo             | Descripción                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `zoneId`          | ID de la zona en Cloudflare                                                           |
+| `zoneName`        | El dominio a monitorear                                                               |
+| `mailTo`          | Destinatario de las alertas                                                           |
+| `mailFrom`        | Remitente (debe estar verificado en tu cuenta Resend)                                 |
+| `expiryAlertDays` | _(opcional)_ Umbrales de días para alertar vencimiento. Default: `[60, 30, 14, 7, 1]` |
+| `expectMX`        | _(opcional)_ Verificar MX. Default: `true`                                            |
+| `expectSPF`       | _(opcional)_ Verificar SPF. Default: `true`                                           |
+| `expectDMARC`     | _(opcional)_ Verificar DMARC. Default: `true`                                         |
+| `expectDKIM`      | _(opcional)_ Verificar DKIM. Default: `true`                                          |
+| `expectCAA`       | _(opcional)_ Alertar si no hay registros CAA. Default: `false`                        |
+| `expectWeb`       | _(opcional)_ Verificar que el sitio responda por HTTPS. Default: `false`              |
 
 Ejemplo con dos dominios (JSON multilinea con comillas triples `"""`):
 

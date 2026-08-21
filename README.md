@@ -1,8 +1,8 @@
-# 👁️ DNS Monitor - Cloudflare Worker
+# 🛰️ DNS Monitor - Cloudflare Worker
 
 > 🇬🇧 English | 🇪🇸 [Español](README.es.md)
 
-### Domain monitoring with email alerts: DNS changes, nameservers, expiry, email records, DNSSEC and monitor health
+### 🛰️ Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.
 
 This project implements a **Cloudflare Worker with cron** that monitors:
 
@@ -12,10 +12,10 @@ This project implements a **Cloudflare Worker with cron** that monitors:
 - domain expiration (RDAP, free, no API key), including **registrar changes** and **critical statuses** (`pendingDelete`, `redemptionPeriod`, `clientHold`)
 - email records: **MX, SPF, DMARC, DKIM** (DNS over HTTPS), plus **SPF DNS lookup limit** (RFC 7208) and **DMARC rua/ruf** report addresses
 - **DNSSEC** status (Cloudflare + public DS records)
-- **CAA** records (*optional*, `expectCAA`)
+- **CAA** records (_optional_, `expectCAA`)
 - **HTTPS (SVCB)** record in the apex
 - **nameserver consistency** between resolvers 1.1.1.1 and 8.8.8.8 (possible DNS hijacking/fragmentation)
-- **web check** (*optional*, `expectWeb`): is the site actually responding over HTTPS?
+- **web check** (_optional_, `expectWeb`): is the site actually responding over HTTPS?
 - monitor health: missed runs and recurring errors (heartbeat)
 
 And it sends an automatic email when it detects any difference or problem. It can monitor **multiple domains**, each with its own recipient email.
@@ -77,7 +77,7 @@ Optional — external watchdog (covers the total death of the Worker, which the 
 3. Set the **Period** to `10` minutes and the **Grace** to `1` day (or more, if you don't want night emails). The Worker pings at the end of every successful run; Healthchecks alerts if the pings stop.
 4. Copy the ping URL of the check (e.g. `https://hc-ping.com/<uuid>`) and configure it as a secret:
 
-       npx wrangler secret put HEALTHCHECKS_URL
+   npx wrangler secret put HEALTHCHECKS_URL
 
 5. Deploy and verify: after the next run you should see the check's **Pings** list update, and the Worker logs `Healthchecks ping` activity in `wrangler tail`. If the cron dies entirely, Healthchecks sends the alert.
 
@@ -90,19 +90,19 @@ Edit `wrangler.toml`:
 
 `DOMAINS` format — per domain:
 
-| Field            | Description                                                                     |
-| ---------------- | ------------------------------------------------------------------------------- |
-| `zoneId`         | Zone ID in Cloudflare                                                           |
-| `zoneName`       | The domain to monitor                                                           |
-| `mailTo`         | Alert recipient                                                                 |
-| `mailFrom`       | Sender (must be verified in your Resend account)                                |
-| `expiryAlertDays`| *(optional)* Day thresholds to alert expiry. Default: `[60, 30, 14, 7, 1]`       |
-| `expectMX`       | *(optional)* Verify MX. Default: `true`                                         |
-| `expectSPF`      | *(optional)* Verify SPF. Default: `true`                                        |
-| `expectDMARC`     | *(optional)* Verify DMARC. Default: `true`                                      |
-| `expectDKIM`      | *(optional)* Verify DKIM. Default: `true`                                      |
-| `expectCAA`       | *(optional)* Warn if no CAA records exist. Default: `false`                    |
-| `expectWeb`       | *(optional)* Check the site responds over HTTPS. Default: `false`              |
+| Field             | Description                                                                |
+| ----------------- | -------------------------------------------------------------------------- |
+| `zoneId`          | Zone ID in Cloudflare                                                      |
+| `zoneName`        | The domain to monitor                                                      |
+| `mailTo`          | Alert recipient                                                            |
+| `mailFrom`        | Sender (must be verified in your Resend account)                           |
+| `expiryAlertDays` | _(optional)_ Day thresholds to alert expiry. Default: `[60, 30, 14, 7, 1]` |
+| `expectMX`        | _(optional)_ Verify MX. Default: `true`                                    |
+| `expectSPF`       | _(optional)_ Verify SPF. Default: `true`                                   |
+| `expectDMARC`     | _(optional)_ Verify DMARC. Default: `true`                                 |
+| `expectDKIM`      | _(optional)_ Verify DKIM. Default: `true`                                  |
+| `expectCAA`       | _(optional)_ Warn if no CAA records exist. Default: `false`                |
+| `expectWeb`       | _(optional)_ Check the site responds over HTTPS. Default: `false`          |
 
 Example with two domains (multiline JSON with triple quotes `"""`):
 
