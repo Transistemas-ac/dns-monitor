@@ -243,13 +243,6 @@
                   Read).</span
                 >
               </div>
-              <div class="req-item">
-                <span class="emoji">💾</span
-                ><span
-                  >Un namespace de <strong>KV</strong> para los snapshots y
-                  timestamps.</span
-                >
-              </div>
             </div>
           </div>
 
@@ -277,6 +270,29 @@
 <span class="cmd">npx wrangler deploy</span>
 
 <span class="ok">✔ Monitor corriendo</span></pre>
+
+              <p class="code-note">
+                Pegá el <code>id</code> del KV y cargá la lista de dominios a
+                monitorear en <code>wrangler.toml</code>:
+              </p>
+              <pre><span class="cmd">kv_namespaces</span> = [
+  { <span class="cmd">binding</span> = <span class="cmd">"DNS_MONITOR"</span>, <span class="cmd">id</span> = <span class="cmd">"&lt;id del namespace&gt;"</span> }
+]
+
+<span class="cmd">routes</span> = [
+  { <span class="cmd">pattern</span> = <span class="cmd">"dns.transistemas.org"</span>, <span class="cmd">custom_domain</span> = <span class="cmd">true</span> }
+]
+
+<span class="cmd">[vars]</span>
+<span class="cmt"># Lista de dominios a monitorear (recuerda eliminar el default)</span>
+<span class="cmd">DOMAINS</span> = <span class="cmd">"""</span>[
+  {
+    <span class="cmd">"zoneId"</span>: <span class="cmd">"&lt;ZONE_ID&gt;"</span>,
+    <span class="cmd">"zoneName"</span>: <span class="cmd">"example.com"</span>,
+    <span class="cmd">"mailTo"</span>: <span class="cmd">"admin@example.com"</span>,
+    <span class="cmd">"mailFrom"</span>: <span class="cmd">"dns@example.com"</span>
+  }
+]<span class="cmd">"""</span></pre>
             </div>
           </div>
 

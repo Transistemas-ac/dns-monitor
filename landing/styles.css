@@ -673,6 +673,20 @@ main {
   padding: 0 1.5rem 1.5rem;
 }
 
+.code-card .code-note {
+  color: var(--text-gray);
+  font-size: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+.code-card .code-note code {
+  background: rgba(84, 180, 240, 0.15);
+  color: var(--blue);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
 .watchdog-card {
   border-radius: var(--radius-card);
   border: 2px solid rgba(142, 83, 188, 0.3);

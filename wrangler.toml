@@ -3,7 +3,7 @@ main = "src/worker.js"
 compatibility_date = "2025-11-11"
 
 kv_namespaces = [
-  { binding = "DNS_MONITOR", id = "aca58e031e124d9bb4199129a2b38332", preview_id = "420fd272cb164d61bb21d921384eb566" }
+  { binding = "DNS_MONITOR", id = "aca58e031e124d9bb4199129a2b38332" }
 ]
 
 routes = [
@@ -33,10 +33,6 @@ DOMAINS = """[
     "expectDKIM": true
   }
 ]"""
-
-# Opcional: URL de ping de Healthchecks.io (watchdog externo del monitor)
-# Se configura como secreto con: npx wrangler secret put HEALTHCHECKS_URL
-# Ejemplo: https://hc-ping.com/<uuid>
 
 [observability]
 [observability.logs]

@@ -54,7 +54,12 @@ Instalar dependencias:
 Crear el namespace de KV:
 
     npx wrangler kv namespace create DNS_MONITOR
-    npx wrangler kv namespace create DNS_MONITOR --preview
+
+El comando devuelve un JSON con un `id`. Copialo en `wrangler.toml`:
+
+    kv_namespaces = [
+      { binding = "DNS_MONITOR", id = "<id del comando>" }
+    ]
 
 Configurar los secretos:
 
@@ -74,7 +79,7 @@ Opcional — watchdog externo (cubre la muerte total del Worker, que el heartbea
 
 Editar `wrangler.toml`:
 
-- `id` y `preview_id` reales del KV
+- el `id` devuelto por el comando de KV de arriba (bloque `kv_namespaces`)
 - la variable `DOMAINS` con la lista de dominios a monitorear (JSON array)
 
 > ⚠️ **Importante:** la variable `DOMAINS` viene configurada por defecto con los valores de **transistemas.org** como ejemplo. Debes reemplazarla con **tu propio dominio** y **tus propios correos** antes de desplegar.
