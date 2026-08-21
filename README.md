@@ -2,7 +2,7 @@
 
 > 🇬🇧 English | 🇪🇸 [Español](README.es.md)
 
-### 🛰️ Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.
+### Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.
 
 This project implements a **Cloudflare Worker with cron** that monitors:
 
