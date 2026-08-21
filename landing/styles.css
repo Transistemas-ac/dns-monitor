@@ -739,6 +739,45 @@ pre .ok {
   color: var(--success);
 }
 
+/* ===== Footer ===== */
+.footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.75rem 2rem;
+  border-top: 2px solid var(--border);
+  background: var(--card);
+}
+
+.footer-link {
+  color: var(--text-gray);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.footer-link:hover {
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  justify-self: start;
+}
+
+.footer-link-center {
+  justify-self: center;
+}
+
+.footer > .footer-link:last-child {
+  justify-self: end;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
   .features-grid,
