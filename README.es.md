@@ -1,4 +1,4 @@
-# 🛰️ DNS Monitor - Cloudflare Worker
+<h1 align="center">🛰️ DNS Monitor</h1>
 
 > 🇪🇸 Español | 🇬🇧 [English](README.md)
 
