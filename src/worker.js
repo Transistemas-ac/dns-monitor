@@ -17,7 +17,11 @@ import {
   recordDomainError,
   clearDomainError,
 } from "./utils/checkHeartbeat.js";
-import buildEmailBody, { buildDnsSection, buildNsSection } from "./utils/buildEmailBody.js";
+import buildEmailBody, {
+  buildEmailText,
+  buildDnsSection,
+  buildNsSection,
+} from "./utils/buildEmailBody.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -98,7 +102,8 @@ async function runCheck(env) {
         from: domain.mailFrom,
         to: domain.mailTo,
         subject,
-        body: buildEmailBody(domain.zoneName, sections),
+        html: buildEmailBody(domain.zoneName, sections),
+        text: buildEmailText(domain.zoneName, sections),
       });
     }
   }
@@ -111,7 +116,8 @@ async function runCheck(env) {
         from: t.from,
         to: t.to,
         subject: `🚨 ${section.title}`,
-        body: buildEmailBody("Monitor global", [section]),
+        html: buildEmailBody("Monitor global", [section]),
+        text: buildEmailText("Monitor global", [section]),
       });
     }
   }

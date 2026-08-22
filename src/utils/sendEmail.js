@@ -1,4 +1,4 @@
-export default async function sendEmail(env, { from, to, subject, body }) {
+export default async function sendEmail(env, { from, to, subject, text, html }) {
   const apiKey = env.RESEND_API_KEY;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -11,7 +11,8 @@ export default async function sendEmail(env, { from, to, subject, body }) {
       from,
       to: [to],
       subject,
-      text: body,
+      text,
+      html,
     }),
   });
 
