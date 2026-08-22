@@ -1,8 +1,39 @@
 <h1 align="center">🛰️ DNS Monitor</h1>
 
-> 🇬🇧 English | 🇪🇸 [Español](README.es.md)
+<p align="center">
+  🇬🇧 English - <a href="README.es.md">🇪🇸 Español</a>
+</p>
 
-### Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.
+<p align="center">Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.</p>
+
+<br>
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/1.png" alt="Landing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/2.png" alt="Landing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/3.png" alt="Landing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/4.png" alt="Landing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/5.png" alt="Landing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/6.png" alt="Landing" /></td>
+  </tr>
+</table>
+
+<br>
+
+## ⚙️ Features
 
 This project implements a **Cloudflare Worker with cron** that monitors:
 
