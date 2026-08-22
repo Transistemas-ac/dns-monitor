@@ -1,5 +1,8 @@
 import dohQuery from "./dohQuery.js";
 
+const stripEch = (s) => s.replace(/\s+ech=[^\s]+/g, "");
+const normalize = (records) => records.map(stripEch);
+
 export default async function checkHttpsRecord(env, domain) {
   const { zoneId, zoneName } = domain;
   const key = `https_state_${zoneId}`;
@@ -20,7 +23,9 @@ export default async function checkHttpsRecord(env, domain) {
     return null;
   }
 
-  const changed = JSON.stringify(prev.records) !== JSON.stringify(records);
+  const prevNorm = normalize(prev.records);
+  const currNorm = normalize(records);
+  const changed = JSON.stringify(prevNorm) !== JSON.stringify(currNorm);
   if (!changed) return null;
 
   await env.DNS_MONITOR.put(key, JSON.stringify({ records }));
@@ -30,9 +35,9 @@ export default async function checkHttpsRecord(env, domain) {
     lines.push("⚠️ Ya no hay registro HTTPS (SVCB) en el apex");
   } else {
     lines.push("Registros HTTPS (SVCB) actuales:");
-    for (const r of records) lines.push(`+ ${r}`);
-    for (const r of prev.records) {
-      if (!records.includes(r)) lines.push(`- ${r}`);
+    for (const r of currNorm) lines.push(`+ ${r}`);
+    for (const r of prevNorm) {
+      if (!currNorm.includes(r)) lines.push(`- ${r}`);
     }
   }
 
