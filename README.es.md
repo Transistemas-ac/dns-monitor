@@ -4,7 +4,12 @@
   <a href="README.md">🇬🇧 English</a> - 🇪🇸 Español
 </p>
 
-<p align="center">Monitor de dominios e infraestructura con alertas por email: detecta cambios en DNS, nameservers, registrador, DNSSEC, certificados, configuración de email, disponibilidad web y salud del monitor.</p>
+<p align="center">
+  Monitor de dominios e infraestructura con alertas por email: detecta cambios en DNS, nameservers, registrador, DNSSEC, certificados, configuración de email, disponibilidad web y salud del monitor.
+</p>
+<p align="center">
+Construido en Cloudflare Workers con scheduled cron checks, KV storage y DNS-over-HTTPS lookups.
+</p>
 
 <br>
 
