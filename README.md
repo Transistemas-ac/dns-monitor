@@ -4,7 +4,12 @@
   🇬🇧 English - <a href="README.es.md">🇪🇸 Español</a>
 </p>
 
-<p align="center">Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.</p>
+<p align="center">
+  Domain and infrastructure monitoring with email alerts: detects changes to DNS, nameservers, registrar, DNSSEC, certificates, email configuration, website availability, and monitor health.
+</p>
+<p align="center">
+Built on Cloudflare Workers with scheduled cron checks, KV storage, and DNS-over-HTTPS lookups.
+</p>
 
 <br>
 
