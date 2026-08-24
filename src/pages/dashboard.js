@@ -71,7 +71,7 @@ export function renderDashboardPage({ user }) {
 
     function esc(v) {
       return String(v ?? "").replace(/[&<>"']/g, (c) =>
-        ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "'" }[c])
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
       );
     }
     function fmtTs(ts) {
