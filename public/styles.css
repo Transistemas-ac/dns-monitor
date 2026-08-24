@@ -1298,7 +1298,12 @@ pre .ok {
   .form-grid {
     grid-template-columns: 1fr;
   }
-  .auth-card {
+.auth-wrap-top {
+  align-items: flex-start;
+  padding-top: 7rem;
+}
+
+.auth-card {
     padding: 2rem 1.25rem;
   }
 }

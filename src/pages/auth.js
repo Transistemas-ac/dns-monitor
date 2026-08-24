@@ -9,7 +9,7 @@ function esc(value) {
     .replaceAll("'", "&#39;");
 }
 
-function shell({ title, user, content }) {
+function shell({ title, user, content, wrapClass }) {
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -33,7 +33,7 @@ function shell({ title, user, content }) {
       }
     </ul>
   </nav>
-  <main class="container auth-wrap">
+  <main class="container auth-wrap${wrapClass ? ` ${wrapClass}` : ""}">
     ${content}
     <script>
       document.querySelectorAll(".pass-toggle").forEach(function (btn) {
@@ -228,6 +228,7 @@ export function renderChangePasswordPage({ user, error }) {
   return shell({
     title: "Cambiar contraseña — DNS Monitor",
     user,
+    wrapClass: "auth-wrap-top",
     content: `
       <section class="auth-card blue">
         <span class="auth-emoji">🔐</span>
