@@ -27,13 +27,14 @@ export function appShell({ user, active = "", content, script, title }) {
       <span></span><span></span><span></span>
     </button>
     <ul class="nav-links" id="nav-links">
-      <li><a href="/app" class="${active === "dashboard" ? "nav-active" : ""}">Monitor</a></li>
-      <li><a href="/app/alertas" class="${active === "alertas" ? "nav-active" : ""}">Alertas</a></li>
+      <li><a href="/app" class="${active === "dashboard" ? "nav-active" : ""}">🛰️ Monitor</a></li>
+      <li><a href="/app/alertas" class="${active === "alertas" ? "nav-active" : ""}">🔔 Alertas</a></li>
       <li>
         <div class="nav-user-wrap">
           <button type="button" class="nav-user-btn" id="user-menu-btn">👤 ${esc(user.email)}</button>
           <div class="user-menu" id="user-menu" hidden>
-            <a href="/change-password">🔑 Cambiar contraseña</a>
+            <a href="/app/token">🔑 Token Cloudflare</a>
+            <a href="/change-password">🔐 Cambiar contraseña</a>
             <a href="/logout">🚪 Cerrar sesión</a>
           </div>
         </div>

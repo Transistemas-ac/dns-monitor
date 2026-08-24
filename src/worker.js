@@ -57,6 +57,7 @@ import {
 } from "./auth.js";
 import { renderDashboardPage } from "./pages/dashboard.js";
 import { renderAlertsPage } from "./pages/alerts.js";
+import { renderTokenPage } from "./pages/token.js";
 import {
   renderChangePasswordPage,
   renderForgotPage,
@@ -72,7 +73,7 @@ import {
   handleApiDomains,
 } from "./api/domains.js";
 import { handleApiChannels } from "./api/channels.js";
-import { handleApiSettings } from "./api/settings.js";
+import { handleApiSettings, handleApiToken } from "./api/settings.js";
 import sendToChannels from "./utils/sendToChannels.js";
 import { emailHtml, sendSystemEmail, SYSTEM_MAIL_FROM } from "./utils/systemEmail.js";
 
@@ -125,6 +126,10 @@ async function handleFetch(request, env) {
 
     if (url.pathname === "/api/settings" || url.pathname === "/api/settings/test") {
       return handleApiSettings(env, request, user);
+    }
+
+    if (url.pathname === "/api/token") {
+      return handleApiToken(env, request, user);
     }
 
     if (url.pathname.startsWith("/api/channels")) {
@@ -366,6 +371,12 @@ async function handleFetch(request, env) {
       const user = await getCurrentUser(env, request);
       if (!user) return redirect("/login");
       return html(renderAlertsPage({ user }));
+    }
+
+    case "/app/token": {
+      const user = await getCurrentUser(env, request);
+      if (!user) return redirect("/login");
+      return html(renderTokenPage({ user }));
     }
 
     case "/app": {

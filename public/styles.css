@@ -1506,3 +1506,101 @@ pre .ok {
     width: 100%;
   }
 }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-hover);
+  max-width: 28rem;
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+.modal-head {
+  margin-bottom: 1rem;
+}
+.modal-emoji {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.modal h2 {
+  font-size: 1.25rem;
+  color: var(--text);
+}
+.modal p {
+  color: var(--text-gray);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.modal-actions .btn {
+  flex: 1;
+}
+
+/* ===== Página de token ===== */
+.token-steps {
+  list-style: none;
+  counter-reset: steps;
+  padding: 0;
+  margin: 0 0 1rem 0;
+}
+.token-steps li {
+  position: relative;
+  padding-left: 2.25rem;
+  padding-bottom: 0.75rem;
+  color: var(--text-gray);
+  line-height: 1.5;
+}
+.token-steps li::before {
+  counter-increment: steps;
+  content: counter(steps);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.token-perms {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem 0;
+}
+.token-perms li {
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  position: relative;
+  color: var(--text-gray);
+  line-height: 1.5;
+}
+.token-perms li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-weight: 700;
+}

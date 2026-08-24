@@ -7,12 +7,13 @@ import {
   deleteDomain,
   deleteKvStateForZone,
   getDomain,
+  getUserCfToken,
   listDomains,
   listAlerts,
   setUserCfToken,
   updateDomain,
 } from "../db.js";
-import { encryptSecret } from "../crypto.js";
+import { decryptSecret, encryptSecret } from "../crypto.js";
 import { jsonError, jsonOk } from "../auth.js";
 
 const ZONE_ID_RE = /^[0-9a-f]{32}$/i;
@@ -38,7 +39,6 @@ function maskSecrets(domain) {
     expectDKIM: !!domain.expect_dkim,
     expectCAA: !!domain.expect_caa,
     expectWeb: !!domain.expect_web,
-    hasCfToken: !!domain.cf_token_enc,
     lastCheckTs: domain.last_check_ts,
     lastError: domain.last_error,
     createdAt: domain.created_at,
@@ -130,11 +130,22 @@ export async function handleApiDomains(env, request, user) {
       if (quota >= DB_QUOTA_DOMAINS) {
         return jsonError(403, `Alcanzaste el límite de ${DB_QUOTA_DOMAINS} dominios del plan gratuito.`);
       }
-      // El token CF se guarda a nivel de usuario, no por dominio
-      // Validamos que el token tenga acceso a la zona
-      const zoneId = await validateCfToken(body.zoneName.trim(), body.cfToken);
 
-      const cf = await encryptSecret(env, body.cfToken);
+      /* Resolver el token CF: usar el enviado, o el guardado a nivel de usuario. */
+      let cfToken = body.cfToken;
+      if (!cfToken) {
+        const stored = await getUserCfToken(env, user.id);
+        if (stored?.cf_token_enc) {
+          cfToken = await decryptSecret(env, stored.cf_token_enc, stored.cf_token_iv);
+        }
+      }
+      if (!cfToken) {
+        return jsonError(400, "Necesitás configurar un token de Cloudflare. Andá a /app/token.");
+      }
+
+      // Validar que el token tenga acceso a la zona
+      const zoneId = await validateCfToken(body.zoneName.trim(), cfToken);
+
       const flags = flagsFromBody(body);
 
       const id = await createDomain(env, {
@@ -146,8 +157,12 @@ export async function handleApiDomains(env, request, user) {
           ...flags,
         },
       });
-      // Guardar el token CF a nivel de usuario
-      await setUserCfToken(env, user.id, cf.enc, cf.iv);
+
+      // Guardar el token CF a nivel de usuario (solo si se envió uno nuevo)
+      if (body.cfToken) {
+        const cf = await encryptSecret(env, body.cfToken);
+        await setUserCfToken(env, user.id, cf.enc, cf.iv);
+      }
 
       return jsonOk({ domain: { id } }, 201);
     } catch (err) {
@@ -181,22 +196,14 @@ export async function handleApiDomainItem(env, request, user, id) {
         ...flagsFromBody(body, existing),
       };
 
-      let cfTokenEnc = existing.cf_token_enc;
-      let cfTokenIv = existing.cf_token_iv;
+      /* Si se envía un token nuevo, validarlo y guardarlo a nivel de usuario. */
       if (body.cfToken) {
         await validateCfToken(existing.zone_name, body.cfToken);
         const cf = await encryptSecret(env, body.cfToken);
-        cfTokenEnc = cf.enc;
-        cfTokenIv = cf.iv;
-        // También actualizar a nivel de usuario
         await setUserCfToken(env, existing.user_id, cf.enc, cf.iv);
       }
 
-      await updateDomain(env, domainId, user.id, {
-        ...next,
-        cfTokenEnc,
-        cfTokenIv,
-      });
+      await updateDomain(env, domainId, user.id, next);
 
       const updated = await getDomain(env, domainId, user.id);
       return jsonOk({ domain: maskSecrets(updated) });

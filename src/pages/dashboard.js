@@ -22,15 +22,7 @@ export function renderDashboardPage({ user }) {
             <span>Dominio</span>
             <input type="text" name="zoneName" required placeholder="example.com" />
           </label>
-          <label class="field">
-            <span>Token Cloudflare</span>
-            <div class="pass-field">
-              <input type="password" name="cfToken" id="cfToken" autocomplete="new-password" placeholder="Pegá tu token (solo lectura)" />
-              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
-            </div>
-          </label>
         </div>
-        <p class="form-note" id="cf-token-hint" hidden>El token de Cloudflare ya está configurado. Dejá vacío para usar el actual.</p>
         <button type="submit" class="btn pink">Agregar</button>
       </form>
     </section>
@@ -60,6 +52,20 @@ export function renderDashboardPage({ user }) {
       <div class="pager" id="alerts-pager"></div>
       <button type="button" class="btn outline" id="btn-close-alerts">Cerrar historial</button>
     </section>
+
+    <div class="modal-overlay" id="token-modal" hidden>
+      <div class="modal">
+        <div class="modal-head">
+          <span class="modal-emoji">🔑</span>
+          <h2>Token de Cloudflare requerido</h2>
+        </div>
+        <p>Para agregar un dominio necesitás configurar tu token de Cloudflare. El token se usa para verificar que tenés acceso a la zona.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn outline" id="modal-cancel">Cancelar</button>
+          <a href="/app/token" class="btn pink">Configurar token →</a>
+        </div>
+      </div>
+    </div>
   `;
 
   const script = `
@@ -67,8 +73,9 @@ export function renderDashboardPage({ user }) {
     const empty = document.getElementById("empty-state");
     const errBox = document.getElementById("alert-err");
     const form = document.getElementById("domain-form");
-    const cfTokenInput = document.getElementById("cfToken");
-    const cfTokenHint = document.getElementById("cf-token-hint");
+    const tokenModal = document.getElementById("token-modal");
+    const modalCancel = document.getElementById("modal-cancel");
+    let hasCfToken = ${user.cf_token_enc ? "true" : "false"};
 
     function esc(v) {
       return String(v ?? "").replace(/[&<>"']/g, (c) =>
@@ -193,45 +200,31 @@ export function renderDashboardPage({ user }) {
       }
     }
 
-    async function loadUserCfTokenStatus() {
-      try {
-        // Check if user has CF token configured (from session user object)
-        const cfTokenInput = document.getElementById("cfToken");
-        const cfTokenHint = document.getElementById("cf-token-hint");
-        if (user.cf_token_enc) {
-          cfTokenInput.type = "password";
-          cfTokenInput.value = "";
-          cfTokenInput.placeholder = "Token ya configurado (dejar vacío para no cambiar)";
-          cfTokenHint.hidden = false;
-        } else {
-          cfTokenInput.type = "password";
-          cfTokenInput.value = "";
-          cfTokenInput.placeholder = "Pegá tu token (solo lectura)";
-          cfTokenHint.hidden = true;
-        }
-      } catch (err) {
-        // Ignore
-      }
-    }
-
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      const id = form.elements.id.value;
-      const payload = {
-        zoneName: form.elements.zoneName.value,
-        cfToken: form.elements.cfToken.value || undefined,
-      };
+      clearErr();
+      const zoneName = form.elements.zoneName.value.trim();
+      if (!zoneName) return;
+      if (!hasCfToken) {
+        tokenModal.hidden = false;
+        return;
+      }
       try {
-        const path = id ? "/api/domains/" + id : "/api/domains";
-        const method = id ? "PUT" : "POST";
-        await api(path, { method, body: JSON.stringify(payload) });
+        await api("/api/domains", { method: "POST", body: JSON.stringify({ zoneName }) });
         form.reset();
         form.elements.id.value = "";
         await loadDomains();
-        await loadUserCfTokenStatus();
       } catch (err) {
         showErr(err.message);
       }
+    });
+
+    modalCancel.addEventListener("click", () => { tokenModal.hidden = true; });
+    tokenModal.addEventListener("click", (ev) => {
+      if (ev.target === tokenModal) tokenModal.hidden = true;
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") tokenModal.hidden = true;
     });
 
     grid.addEventListener("click", async (ev) => {
@@ -318,7 +311,6 @@ export function renderDashboardPage({ user }) {
     });
 
     loadDomains();
-    loadUserCfTokenStatus();
   `;
 
   return appShell({
