@@ -93,7 +93,9 @@ async function validateCfToken(zoneName, cfToken) {
 
 function validateCommon(body) {
   const errors = [];
-  if (!body.zoneId || !ZONE_ID_RE.test(body.zoneId)) errors.push("zoneId inválido (32 caracteres hexadecimales).");
+  // zoneId se resuelve automáticamente desde zoneName vía la API de Cloudflare,
+  // no lo pedimos al cliente. Solo validamos si viene explícito.
+  if (body.zoneId && !ZONE_ID_RE.test(body.zoneId)) errors.push("zoneId inválido (32 caracteres hexadecimales).");
   if (!body.zoneName || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(body.zoneName)) errors.push("zoneName inválido.");
   if (errors.length) throw new Error(errors.join(" "));
 }
