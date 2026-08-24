@@ -16,6 +16,7 @@ export function renderDashboardPage({ user }) {
 
     <section class="domain-form-inline">
       <form id="domain-form" class="auth-form inline-form">
+        <input type="hidden" name="id" value="" />
         <div class="inline-inputs">
           <label class="field">
             <span>Dominio</span>
