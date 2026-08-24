@@ -1009,7 +1009,7 @@ pre .ok {
   border: 2px solid rgba(254, 152, 204, 0.3);
   background: var(--card);
   box-shadow: var(--shadow);
-  margin-bottom: 2.5rem;
+  margin: 2rem 0 2.5rem;
   overflow: hidden;
 }
 
