@@ -190,6 +190,12 @@ textarea:focus-visible {
   transform: translateY(-2px);
 }
 
+.nav-links a.nav-active {
+  color: var(--text);
+  border-bottom: 2px solid var(--pink);
+  padding-bottom: 2px;
+}
+
 .nav-links a.nav-cta {
   display: inline-block;
   background: var(--pink);

@@ -56,6 +56,7 @@ import {
   startSession,
 } from "./auth.js";
 import { renderDashboardPage } from "./pages/dashboard.js";
+import { renderAlertsPage } from "./pages/alerts.js";
 import {
   renderChangePasswordPage,
   renderForgotPage,
@@ -359,6 +360,12 @@ async function handleFetch(request, env) {
     case "/logout": {
       await logoutSession(env, request);
       return redirect("/", clearSessionCookie(request));
+    }
+
+    case "/app/alertas": {
+      const user = await getCurrentUser(env, request);
+      if (!user) return redirect("/login");
+      return html(renderAlertsPage({ user }));
     }
 
     case "/app": {
