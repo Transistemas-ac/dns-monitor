@@ -74,8 +74,8 @@ export async function createDomain(env, { userId, domain }) {
     `INSERT INTO domains
       (user_id, zone_id, zone_name, mail_to, mail_from, expiry_alert_days,
        expect_mx, expect_spf, expect_dmarc, expect_dkim, expect_caa, expect_web,
-       cf_token_enc, cf_token_iv, resend_key_enc, resend_key_iv, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       cf_token_enc, cf_token_iv, resend_key_enc, resend_key_iv, emoji, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       userId,
@@ -94,6 +94,7 @@ export async function createDomain(env, { userId, domain }) {
       domain.cfTokenIv,
       domain.resendKeyEnc,
       domain.resendKeyIv,
+      domain.emoji || "🌍",
       Date.now()
     )
     .run();
@@ -123,7 +124,7 @@ export async function updateDomain(env, id, userId, fields) {
     `UPDATE domains SET
        mail_to = ?, mail_from = ?, expiry_alert_days = ?,
        expect_mx = ?, expect_spf = ?, expect_dmarc = ?, expect_dkim = ?,
-       expect_caa = ?, expect_web = ?,
+       expect_caa = ?, expect_web = ?, emoji = ?,
        cf_token_enc = ?, cf_token_iv = ?, resend_key_enc = ?, resend_key_iv = ?
      WHERE id = ? AND user_id = ?`
   )
@@ -137,6 +138,7 @@ export async function updateDomain(env, id, userId, fields) {
       fields.expectDKIM ? 1 : 0,
       fields.expectCAA ? 1 : 0,
       fields.expectWeb ? 1 : 0,
+      fields.emoji || "🌍",
       fields.cfTokenEnc,
       fields.cfTokenIv,
       fields.resendKeyEnc,

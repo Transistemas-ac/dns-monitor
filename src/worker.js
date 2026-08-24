@@ -524,6 +524,7 @@ function domainFromRow(row, cfToken, resendKey) {
     userId: row.user_id,
     zoneId: row.zone_id,
     zoneName: row.zone_name,
+    emoji: row.emoji || "🌍",
     mailTo: row.mail_to,
     mailFrom: row.mail_from,
     expiryAlertDays: JSON.parse(row.expiry_alert_days || "[60,30,14,7,1]"),

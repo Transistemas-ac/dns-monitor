@@ -171,7 +171,9 @@ export function renderDashboardPage({ user }) {
       const card = document.createElement("article");
       card.className = "feature-card pink domain-card";
       card.innerHTML =
-        '<div class="head"><span class="emoji">🌍</span><h3>' + esc(d.zoneName) + "</h3></div>" +
+        '<div class="head">' +
+        '<button type="button" class="emoji-btn" data-emoji-open="' + d.id + '" title="Cambiar emoji">' + esc(d.emoji || "🌍") + "</button>" +
+        "<h3>" + esc(d.zoneName) + "</h3></div>" +
         '<div class="body domain-body">' +
         '<div class="domain-row">' + statusBadge(d) + "</div>" +
         (d.lastError ? '<div class="domain-row domain-error">' + esc(d.lastError) + "</div>" : "") +
@@ -184,6 +186,44 @@ export function renderDashboardPage({ user }) {
         "</div>" +
         "</div>";
       grid.appendChild(card);
+    }
+
+    const EMOJIS = ["🌍","🌐","🌏","🛰️","🚀","⭐","🌟","💫","⚡","🔥","💧","🌈","🦄","💜","💙","💚","💛","❤️","🧡","🖤","🤍","💎","🍀","🎯","🔔","📬","✉️","📧","🔑","🛡️","🧭","🧠","👀","🕵️","☁️","🌊"];
+
+    function closeEmojiPicker() {
+      const p = document.querySelector(".emoji-picker");
+      if (p) p.remove();
+    }
+
+    function openEmojiPicker(btn, domainId) {
+      closeEmojiPicker();
+      const picker = document.createElement("div");
+      picker.className = "emoji-picker";
+      picker.innerHTML = EMOJIS.map((e) =>
+        '<button type="button" class="emoji-option" data-emoji="' + e + '">' + e + "</button>"
+      ).join("");
+      const rect = btn.getBoundingClientRect();
+      picker.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 320)) + "px";
+      picker.style.top = rect.bottom + 8 + "px";
+      document.body.appendChild(picker);
+
+      picker.addEventListener("click", async (ev) => {
+        const opt = ev.target.closest("[data-emoji]");
+        if (!opt) return;
+        const chosen = opt.dataset.emoji;
+        const previous = btn.textContent;
+        closeEmojiPicker();
+        btn.textContent = chosen;
+        try {
+          await api("/api/domains/" + domainId, {
+            method: "PUT",
+            body: JSON.stringify({ emoji: chosen }),
+          });
+        } catch (err) {
+          btn.textContent = previous;
+          showErr(err.message);
+        }
+      });
     }
 
     async function loadDomains() {
@@ -277,6 +317,12 @@ export function renderDashboardPage({ user }) {
     });
 
     grid.addEventListener("click", async (ev) => {
+      const emojiBtn = ev.target.closest("button[data-emoji-open]");
+      if (emojiBtn) {
+        ev.stopPropagation();
+        openEmojiPicker(emojiBtn, emojiBtn.dataset.emojiOpen);
+        return;
+      }
       const btn = ev.target.closest("button[data-act]");
       if (!btn) return;
       const id = btn.dataset.id;
@@ -349,6 +395,15 @@ export function renderDashboardPage({ user }) {
 
     document.getElementById("btn-new").addEventListener("click", () => openForm(null));
     document.getElementById("btn-cancel").addEventListener("click", resetForm);
+
+    document.addEventListener("click", (ev) => {
+      if (!ev.target.closest(".emoji-picker") && !ev.target.closest("[data-emoji-open]")) {
+        closeEmojiPicker();
+      }
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") closeEmojiPicker();
+    });
 
     loadDomains();
   `;

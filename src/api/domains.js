@@ -30,6 +30,7 @@ function maskSecrets(domain) {
     id: domain.id,
     zoneId: domain.zone_id,
     zoneName: domain.zone_name,
+    emoji: domain.emoji || "🌍",
     mailTo: domain.mail_to,
     mailFrom: domain.mail_from,
     expiryAlertDays: JSON.parse(domain.expiry_alert_days || "[60,30,14,7,1]"),
@@ -122,17 +123,30 @@ function validateCommon(body) {
   if (errors.length) throw new Error(errors.join(" "));
 }
 
-function flagsFromBody(body) {
+function flagsFromBody(body, existing) {
+  const parseDays = () => {
+    if (Array.isArray(body.expiryAlertDays)) {
+      return body.expiryAlertDays.map(Number).filter((n) => Number.isFinite(n));
+    }
+    if (existing?.expiry_alert_days) {
+      try {
+        return JSON.parse(existing.expiry_alert_days);
+      } catch {
+        return [60, 30, 14, 7, 1];
+      }
+    }
+    return [60, 30, 14, 7, 1];
+  };
+  const bool = (key, fallback) =>
+    body[key] !== undefined ? !!body[key] : fallback;
   return {
-    expiryAlertDays: Array.isArray(body.expiryAlertDays)
-      ? body.expiryAlertDays.map(Number).filter((n) => Number.isFinite(n))
-      : [60, 30, 14, 7, 1],
-    expectMX: body.expectMX !== false,
-    expectSPF: body.expectSPF !== false,
-    expectDMARC: body.expectDMARC !== false,
-    expectDKIM: body.expectDKIM !== false,
-    expectCAA: !!body.expectCAA,
-    expectWeb: !!body.expectWeb,
+    expiryAlertDays: parseDays(),
+    expectMX: bool("expectMX", existing ? existing.expect_mx === 1 : true),
+    expectSPF: bool("expectSPF", existing ? existing.expect_spf === 1 : true),
+    expectDMARC: bool("expectDMARC", existing ? existing.expect_dmarc === 1 : true),
+    expectDKIM: bool("expectDKIM", existing ? existing.expect_dkim === 1 : true),
+    expectCAA: bool("expectCAA", existing ? existing.expect_caa === 1 : false),
+    expectWeb: bool("expectWeb", existing ? existing.expect_web === 1 : false),
   };
 }
 
@@ -175,6 +189,7 @@ export async function handleApiDomains(env, request, user) {
           zoneName: body.zoneName.trim(),
           mailTo: body.mailTo.trim(),
           mailFrom: body.mailFrom.trim(),
+          emoji: body.emoji || "🌍",
           ...flags,
           cfTokenEnc: cf.enc,
           cfTokenIv: cf.iv,
@@ -213,10 +228,11 @@ export async function handleApiDomainItem(env, request, user, id) {
       const next = {
         mailTo: body.mailTo ?? existing.mail_to,
         mailFrom: body.mailFrom ?? existing.mail_from,
-        ...flagsFromBody(body),
+        emoji: body.emoji ?? (existing.emoji || "🌍"),
+        ...flagsFromBody(body, existing),
       };
-      if (next.mailTo && !EMAIL_RE.test(next.mailTo)) return jsonError(400, "mailTo inválido.");
-      if (next.mailFrom && !EMAIL_RE.test(next.mailFrom)) return jsonError(400, "mailFrom inválido.");
+      if (body.mailTo !== undefined && !EMAIL_RE.test(next.mailTo)) return jsonError(400, "mailTo inválido.");
+      if (body.mailFrom !== undefined && !EMAIL_RE.test(next.mailFrom)) return jsonError(400, "mailFrom inválido.");
 
       let cfTokenEnc = existing.cf_token_enc;
       let cfTokenIv = existing.cf_token_iv;
