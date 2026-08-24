@@ -1519,6 +1519,9 @@ pre .ok {
   z-index: 1000;
   padding: 1.5rem;
 }
+.modal-overlay[hidden] {
+  display: none;
+}
 .modal {
   background: var(--card);
   border: 1px solid var(--border);
