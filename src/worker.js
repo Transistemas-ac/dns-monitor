@@ -418,7 +418,7 @@ async function sendWelcomeEmail(env, request, email) {
   const origin = new URL(request.url).origin;
   return sendSystemEmail(env, request, {
     to: email,
-    subject: "Te damos la bienvenida a DNS Monitor 🛰️",
+    subject: "Te damos la bienvenida a DNS Monitor",
     text:
       "¡Hola!\n\n" +
       "Tu cuenta en DNS Monitor se creó con éxito. Estos son tus próximos pasos:\n\n" +
@@ -428,7 +428,7 @@ async function sendWelcomeEmail(env, request, email) {
       "Cualquier duda, respondé este correo.\n\n" +
       "— Equipo de DNS Monitor",
     html: emailHtml(
-      "Te damos la bienvenida 🛰️",
+      "Te damos la bienvenida",
       "Tu cuenta en DNS Monitor se creó con éxito. Estos son tus próximos pasos:",
       `${origin}/login`,
       "Ir a mi dashboard",
@@ -471,7 +471,7 @@ function emailHtml(title, body, link, buttonLabel, steps) {
   const stepsHtml = Array.isArray(steps) && steps.length
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 20px">
          ${steps.map((s, i) =>
-           `<tr><td style="padding:7px 0;color:#b8b8b7;font-size:14px;line-height:1.55;border-top:1px solid #3a3a39">
+           `<tr><td style="padding:10px 0;color:#b8b8b7;font-size:14px;line-height:1.55">
               <span style="display:inline-block;background:#54b4f0;color:#1b1b1a;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-weight:bold;font-size:12px;margin-right:10px">${i + 1}</span>${s}
             </td></tr>`
          ).join("")}
