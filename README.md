@@ -8,7 +8,7 @@
   Monitor de dominios e infraestructura con alertas en tiempo real: detecta cambios en DNS, nameservers, registrador, DNSSEC, configuración de email, disponibilidad web y salud del monitor.
 </p>
 <p align="center">
-  SaaS multi-tenant sobre Cloudflare Workers: registrate, conectá tus cuentas y vigilá tus dominios desde un dashboard — sin instalar nada.
+Construido en Cloudflare Workers con scheduled cron checks, KV storage y DNS-over-HTTPS lookups.
 </p>
 
 <br>
