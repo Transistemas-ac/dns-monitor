@@ -9,6 +9,7 @@ export function renderAlertsPage({ user }) {
         <h1 class="dash-title">Alertas 🔔</h1>
         <p class="dash-sub">Configurá cómo recibís las alertas. Se aplican a todos tus dominios.</p>
       </div>
+      <a class="btn outline" href="/app">← Volver al dashboard</a>
     </header>
 
     <div class="alert red" id="alert-err" hidden></div>
