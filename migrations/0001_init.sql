@@ -8,6 +8,8 @@ CREATE TABLE users (
   salt TEXT NOT NULL,
   alert_email TEXT,
   verified INTEGER NOT NULL DEFAULT 0,
+  cf_token_enc TEXT,
+  cf_token_iv TEXT,
   created_at INTEGER NOT NULL
 );
 
@@ -24,8 +26,8 @@ CREATE TABLE domains (
   expect_dkim INTEGER NOT NULL DEFAULT 1,
   expect_caa INTEGER NOT NULL DEFAULT 0,
   expect_web INTEGER NOT NULL DEFAULT 0,
-  cf_token_enc TEXT NOT NULL,
-  cf_token_iv TEXT NOT NULL,
+  cf_token_enc TEXT,
+  cf_token_iv TEXT,
   emoji TEXT NOT NULL DEFAULT '🌍',
   last_check_ts INTEGER,
   last_error TEXT,

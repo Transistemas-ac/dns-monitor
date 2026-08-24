@@ -399,7 +399,7 @@ async function sendVerificationEmail(env, request, userId, email) {
     text: `Confirmá tu cuenta de DNS Monitor tocando este link (válido por 24 h):\n\n${link}`,
     html: emailHtml(
       "Confirmá tu email",
-      "Tocá el botón para activar tu cuenta de DNS Monitor. El link vence en 24 horas.",
+      "Tocá el botón para activar tu cuenta de DNS Monitor.\n El link vence en 24 horas.",
       link,
       "Confirmar mi email"
     ),
@@ -464,7 +464,7 @@ async function sendResetEmail(env, request, userId, email) {
    Motor de monitoreo (cron)
    ============================================================ */
 
-function domainFromRow(row, cfToken) {
+function domainFromRow(row) {
   return {
     id: row.id,
     userId: row.user_id,
@@ -479,7 +479,8 @@ function domainFromRow(row, cfToken) {
     expectCAA: !!row.expect_caa,
     expectWeb: !!row.expect_web,
     alertEmail: row.user_alert_email || row.user_email,
-    cfToken,
+    cfTokenEnc: row.cf_token_enc,
+    cfTokenIv: row.cf_token_iv,
   };
 }
 
@@ -491,7 +492,7 @@ async function getDomains(env) {
     for (const row of rows) {
       try {
         const cfToken = await decryptSecret(env, row.cf_token_enc, row.cf_token_iv);
-        domains.push(domainFromRow(row, cfToken));
+        domains.push(domainFromRow({ ...row, cf_token_enc: row.cf_token_enc, cf_token_iv: row.cf_token_iv }));
       } catch (err) {
         console.error(`Secretos cifrados inválidos para ${row.zone_name}:`, err.message);
         await updateDomainStatus(env, row.id, {
@@ -533,7 +534,6 @@ async function getDomains(env) {
 }
 
 async function runCheck(env) {
-  const domains = await getDomains(env);
 
   const channelsByUser = new Map();
   if (env.DB) {

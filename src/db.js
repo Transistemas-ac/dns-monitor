@@ -43,7 +43,7 @@ export async function createSession(env, { tokenHash, userId, expiresAt }) {
 
 export async function getSessionUser(env, tokenHash) {
   const { results } = await env.DB.prepare(
-    `SELECT u.id, u.email, u.alert_email, s.expires_at
+    `SELECT u.id, u.email, u.alert_email, u.cf_token_enc, u.cf_token_iv, s.expires_at
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`
   )
@@ -72,10 +72,10 @@ export async function countDomains(env, userId) {
 export async function createDomain(env, { userId, domain }) {
   const res = await env.DB.prepare(
     `INSERT INTO domains
-      (user_id, zone_id, zone_name, mail_to, mail_from, expiry_alert_days,
+      (user_id, zone_id, zone_name, expiry_alert_days,
        expect_mx, expect_spf, expect_dmarc, expect_dkim, expect_caa, expect_web,
-       cf_token_enc, cf_token_iv, emoji, created_at)
-     VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       emoji, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       userId,
@@ -88,8 +88,6 @@ export async function createDomain(env, { userId, domain }) {
       domain.expectDKIM ? 1 : 0,
       domain.expectCAA ? 1 : 0,
       domain.expectWeb ? 1 : 0,
-      domain.cfTokenEnc,
-      domain.cfTokenIv,
       domain.emoji || "🌍",
       Date.now()
     )
@@ -120,8 +118,7 @@ export async function updateDomain(env, id, userId, fields) {
     `UPDATE domains SET
        expiry_alert_days = ?,
        expect_mx = ?, expect_spf = ?, expect_dmarc = ?, expect_dkim = ?,
-       expect_caa = ?, expect_web = ?, emoji = ?,
-       cf_token_enc = ?, cf_token_iv = ?
+       expect_caa = ?, expect_web = ?, emoji = ?
      WHERE id = ? AND user_id = ?`
   )
     .bind(
@@ -133,8 +130,6 @@ export async function updateDomain(env, id, userId, fields) {
       fields.expectCAA ? 1 : 0,
       fields.expectWeb ? 1 : 0,
       fields.emoji || "🌍",
-      fields.cfTokenEnc,
-      fields.cfTokenIv,
       id,
       userId
     )
@@ -157,7 +152,7 @@ export async function updateDomainStatus(env, id, { lastCheckTs, lastError }) {
 
 export async function getAllDomains(env) {
   const { results } = await env.DB.prepare(
-    `SELECT d.*, u.email AS user_email, u.alert_email AS user_alert_email
+    `SELECT d.*, u.cf_token_enc, u.cf_token_iv
      FROM domains d JOIN users u ON u.id = d.user_id`
   ).all();
   return results;
@@ -243,6 +238,23 @@ export async function updateUserPassword(env, userId, passwordHash, salt) {
   await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?")
     .bind(userId)
     .run();
+}
+
+export async function setUserCfToken(env, userId, cfTokenEnc, cfTokenIv) {
+  await env.DB.prepare(
+    "UPDATE users SET cf_token_enc = ?, cf_token_iv = ? WHERE id = ?"
+  )
+    .bind(cfTokenEnc, cfTokenIv, userId)
+    .run();
+}
+
+export async function getUserCfToken(env, userId) {
+  const { results } = await env.DB.prepare(
+    "SELECT cf_token_enc, cf_token_iv FROM users WHERE id = ?"
+  )
+    .bind(userId)
+    .all();
+  return results[0] || null;
 }
 
 /* ---------- Settings del usuario (sección Alertas) ---------- */

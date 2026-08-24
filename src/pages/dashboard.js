@@ -29,6 +29,7 @@ export function renderDashboardPage({ user }) {
             </div>
           </label>
         </div>
+        <p class="form-note" id="cf-token-hint" hidden>El token de Cloudflare ya está configurado. Dejá vacío para usar el actual.</p>
         <button type="submit" class="btn pink">Agregar</button>
       </form>
     </section>
@@ -65,6 +66,8 @@ export function renderDashboardPage({ user }) {
     const empty = document.getElementById("empty-state");
     const errBox = document.getElementById("alert-err");
     const form = document.getElementById("domain-form");
+    const cfTokenInput = document.getElementById("cfToken");
+    const cfTokenHint = document.getElementById("cf-token-hint");
 
     function esc(v) {
       return String(v ?? "").replace(/[&<>"']/g, (c) =>
@@ -189,6 +192,39 @@ export function renderDashboardPage({ user }) {
       }
     }
 
+    async function loadUserCfTokenStatus() {
+      try {
+        // Check if user has CF token configured (from session user object)
+        const cfTokenInput = document.getElementById("cfToken");
+        const cfTokenHint = document.getElementById("cf-token-hint");
+        if (user.cf_token_enc) {
+          cfTokenInput.type = "password";
+          cfTokenInput.value = "";
+          cfTokenInput.placeholder = "Token ya configurado (dejar vacío para no cambiar)";
+          cfTokenHint.hidden = false;
+        } else {
+          cfTokenInput.type = "password";
+          cfTokenInput.value = "";
+          cfTokenInput.placeholder = "Pegá tu token (solo lectura)";
+          cfTokenHint.hidden = true;
+        }
+      } catch (err) {
+        // Ignore
+      }
+    }
+
+    async function loadDomains() {
+      try {
+        clearErr();
+        const { domains } = await api("/api/domains");
+        grid.querySelectorAll(".domain-card").forEach((n) => n.remove());
+        empty.hidden = domains.length > 0;
+        domains.forEach(renderDomain);
+      } catch (err) {
+        showErr(err.message);
+      }
+    }
+
     const form = document.getElementById("domain-form");
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
@@ -204,6 +240,7 @@ export function renderDashboardPage({ user }) {
         form.reset();
         form.elements.id.value = "";
         await loadDomains();
+        await loadUserCfTokenStatus();
       } catch (err) {
         showErr(err.message);
       }
@@ -283,6 +320,8 @@ export function renderDashboardPage({ user }) {
       document.getElementById("alerts-section").hidden = true;
     });
 
+    document.getElementById("btn-new").addEventListener("click", () => openForm(null));
+
     document.addEventListener("click", (ev) => {
       if (!ev.target.closest(".emoji-picker") && !ev.target.closest("[data-emoji-open]")) {
         closeEmojiPicker();
@@ -293,6 +332,7 @@ export function renderDashboardPage({ user }) {
     });
 
     loadDomains();
+    loadUserCfTokenStatus();
   `;
 
   return appShell({

@@ -3,7 +3,7 @@
 import { appShell, esc } from "./shell.js";
 
 export function renderAlertsPage({ user }) {
-  const content = `
+const content = `
     <header class="dash-head">
       <div>
         <h1 class="dash-title">Alertas 🔔</h1>

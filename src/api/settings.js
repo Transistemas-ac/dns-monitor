@@ -1,14 +1,19 @@
 /* ===== API JSON de settings del usuario (requiere sesión) ===== */
 
 import { jsonError, jsonOk } from "../auth.js";
-import { updateUserAlertEmail } from "../db.js";
+import { updateUserAlertEmail, getUserCfToken } from "../db.js";
 import { emailHtml, sendSystemEmail } from "../utils/systemEmail.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function handleApiSettings(env, request, user) {
   if (request.method === "GET") {
-    return jsonOk({ settings: { alertEmail: user.alert_email || "" } });
+    return jsonOk({ 
+      settings: { 
+        alertEmail: user.alert_email || "",
+        hasCfToken: !!(user.cf_token_enc && user.cf_token_iv)
+      } 
+    });
   }
 
   if (request.method === "PUT") {

@@ -127,8 +127,8 @@ export async function handleApiDomains(env, request, user) {
       if (quota >= DB_QUOTA_DOMAINS) {
         return jsonError(403, `Alcanzaste el límite de ${DB_QUOTA_DOMAINS} dominios del plan gratuito.`);
       }
-      if (!body.cfToken) return jsonError(400, "El token de Cloudflare es obligatorio.");
-
+      // El token CF se guarda a nivel de usuario, no por dominio
+      // Validamos que el token tenga acceso a la zona
       const zoneId = await validateCfToken(body.zoneName.trim(), body.cfToken);
 
       const cf = await encryptSecret(env, body.cfToken);
@@ -141,10 +141,10 @@ export async function handleApiDomains(env, request, user) {
           zoneName: body.zoneName.trim(),
           emoji: body.emoji || "🌍",
           ...flags,
-          cfTokenEnc: cf.enc,
-          cfTokenIv: cf.iv,
         },
       });
+      // Guardar el token CF a nivel de usuario
+      await setUserCfToken(env, user.id, cf.enc, cf.iv);
 
       return jsonOk({ domain: { id } }, 201);
     } catch (err) {
@@ -185,6 +185,8 @@ export async function handleApiDomainItem(env, request, user, id) {
         const cf = await encryptSecret(env, body.cfToken);
         cfTokenEnc = cf.enc;
         cfTokenIv = cf.iv;
+        // También actualizar a nivel de usuario
+        await setUserCfToken(env, existing.user_id, cf.enc, cf.iv);
       }
 
       await updateDomain(env, domainId, user.id, {
