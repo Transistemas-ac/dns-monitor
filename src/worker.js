@@ -28,9 +28,11 @@ import {
   createUser,
   deleteToken,
   deleteTokensForUser,
+  getAllAlertEmails,
   getAllDomains,
   getTokenUser,
   getUserByEmail,
+  getUserById,
   insertAlert,
   setUserVerified,
   updateDomainStatus,
@@ -54,6 +56,7 @@ import {
 } from "./auth.js";
 import { renderDashboardPage } from "./pages/dashboard.js";
 import {
+  renderChangePasswordPage,
   renderForgotPage,
   renderLoginPage,
   renderMessagePage,
@@ -66,6 +69,7 @@ import {
   handleApiDomainItem,
   handleApiDomains,
 } from "./api/domains.js";
+import { handleApiSettings } from "./api/settings.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -113,6 +117,10 @@ async function handleFetch(request, env) {
 
     if (url.pathname === "/api/domains") {
       return handleApiDomains(env, request, user);
+    }
+
+    if (url.pathname === "/api/settings") {
+      return handleApiSettings(env, request, user);
     }
 
     const match = url.pathname.match(/^\/api\/domains\/(\d+)(\/alerts)?$/);
@@ -309,6 +317,34 @@ async function handleFetch(request, env) {
       }
 
       const cookie = await startSession(env, request, account.id);
+      return redirect("/app", cookie);
+    }
+
+    case "/change-password": {
+      const user = await getCurrentUser(env, request);
+      if (!user) return redirect("/login");
+      if (request.method !== "POST") return html(renderChangePasswordPage({ user }));
+
+      const form = await request.formData();
+      const current = String(form.get("current") || "");
+      const password = String(form.get("password") || "");
+      const password2 = String(form.get("password2") || "");
+
+      const account = await getUserById(env, user.id);
+      const validCurrent = await verifyPassword(current, account.salt, account.password_hash);
+      if (!validCurrent) {
+        return html(renderChangePasswordPage({ user, error: "La contraseña actual es incorrecta." }));
+      }
+      if (password.length < 8) {
+        return html(renderChangePasswordPage({ user, error: "La contraseña nueva debe tener al menos 8 caracteres." }));
+      }
+      if (password !== password2) {
+        return html(renderChangePasswordPage({ user, error: "Las contraseñas nuevas no coinciden." }));
+      }
+
+      const { saltHex, hashHex } = await hashPassword(password);
+      await updateUserPassword(env, user.id, hashHex, saltHex);
+      const cookie = await startSession(env, request, user.id);
       return redirect("/app", cookie);
     }
 
@@ -586,6 +622,28 @@ async function runCheck(env) {
         });
       } catch (err) {
         console.error(`No se pudo enviar el correo global a ${t.to}:`, err);
+      }
+    }
+  }
+
+  /* Alertas globales a los emails configurados en la sección Alertas
+     (usa el email de sistema del operador). */
+  if (globalSections.length > 0 && env.DB && env.RESEND_API_KEY) {
+    const alertEmails = await getAllAlertEmails(env);
+    for (const section of globalSections) {
+      for (const to of alertEmails) {
+        try {
+          await sendEmail({
+            apiKey: env.RESEND_API_KEY,
+            from: env.SYSTEM_MAIL_FROM || SYSTEM_MAIL_FROM,
+            to,
+            subject: `🚨 ${section.title}`,
+            html: buildEmailBody("Monitor global", [section]),
+            text: buildEmailText("Monitor global", [section]),
+          });
+        } catch (err) {
+          console.error(`No se pudo enviar el correo global a ${to}:`, err);
+        }
       }
     }
   }

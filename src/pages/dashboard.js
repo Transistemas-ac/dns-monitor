@@ -25,7 +25,14 @@ export function renderDashboardPage({ user }) {
     <a class="wordmark" href="/" title="DNS Monitor">DNS MONITOR</a>
     <ul class="nav-links">
       <li><a href="/">Página principal</a></li>
-      <li><span class="nav-user">👤 ${esc(user.email)}</span></li>
+      <li>
+        <div class="nav-user-wrap">
+          <button type="button" class="nav-user-btn" id="user-menu-btn">👤 ${esc(user.email)} ▾</button>
+          <div class="user-menu" id="user-menu" hidden>
+            <a href="/change-password">🔑 Cambiar contraseña</a>
+          </div>
+        </div>
+      </li>
       <li><a class="nav-cta" href="/logout">Salir</a></li>
     </ul>
   </nav>
@@ -52,6 +59,7 @@ export function renderDashboardPage({ user }) {
           <label class="field">
             <span>Zone ID (Cloudflare)</span>
             <input type="text" name="zoneId" required pattern="[0-9a-fA-F]{32}" placeholder="32 caracteres hex" />
+            <p class="field-hint">¿Dónde encuentro mi Zone ID? <a class="link" href="https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/" target="_blank" rel="noopener">Ver guía</a></p>
           </label>
           <label class="field">
             <span>Dominio (zoneName)</span>
@@ -59,7 +67,7 @@ export function renderDashboardPage({ user }) {
           </label>
           <label class="field">
             <span>Destinatario de alertas (mailTo)</span>
-            <input type="email" name="mailTo" required value="${esc(user.email)}" placeholder="admin@example.com" />
+            <input type="email" name="mailTo" required value="${esc(user.alertEmail || user.email)}" placeholder="admin@example.com" />
           </label>
           <label class="field">
             <span>Remitente verificado en Resend (mailFrom)</span>
@@ -73,7 +81,7 @@ export function renderDashboardPage({ user }) {
             </div>
           </label>
           <label class="field">
-            <span>API key de Resend</span>
+            <span><a class="link" href="https://resend.com/api-keys" target="_blank" rel="noopener">API key de Resend</a></span>
             <div class="pass-field">
               <input type="password" name="resendKey" id="resendKey" autocomplete="new-password" placeholder="Pegá tu key" />
               <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
@@ -125,6 +133,41 @@ export function renderDashboardPage({ user }) {
       </div>
       <div class="pager" id="alerts-pager"></div>
       <button type="button" class="btn outline" id="btn-close-alerts">Cerrar historial</button>
+    </section>
+
+    <section class="dash-section">
+      <div class="dash-head-inline">
+        <h2 class="dash-subtitle">Alertas</h2>
+        <span class="badge green" id="alerts-saved" hidden>Guardado ✓</span>
+      </div>
+      <div class="features-grid">
+        <article class="feature-card green channel-card">
+          <div class="head">
+            <span class="emoji">📧</span>
+            <h3>Email</h3>
+            <span class="badge green">Activo</span>
+          </div>
+          <div class="body">
+            <label class="field">
+              <span>Email donde querés recibir las alertas</span>
+              <input type="email" id="alert-email" value="${esc(user.alertEmail || user.email)}" placeholder="vos@tudominio.com" />
+            </label>
+            <p class="form-note">Se usa como destinatario por defecto al agregar dominios y para las alertas del monitor.</p>
+            <div class="form-actions">
+              <button type="button" class="btn green btn-small" id="btn-save-alerts">Guardar</button>
+            </div>
+          </div>
+        </article>
+        <article class="feature-card pink channel-card">
+          <div class="head">
+            <span class="emoji">🔮</span>
+            <h3>Más canales</h3>
+          </div>
+          <div class="body">
+            Próximamente: webhooks, Slack, Telegram y más. Si tenés ideas, contanos.
+          </div>
+        </article>
+      </div>
     </section>
   </main>
 
@@ -379,6 +422,33 @@ export function renderDashboardPage({ user }) {
           btn.textContent = show ? "🙈" : "👁️";
           btn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
         });
+      });
+
+      const userMenuBtn = document.getElementById("user-menu-btn");
+      const userMenu = document.getElementById("user-menu");
+      userMenuBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        userMenu.hidden = !userMenu.hidden;
+      });
+      document.addEventListener("click", (ev) => {
+        if (!ev.target.closest(".nav-user-wrap")) userMenu.hidden = true;
+      });
+
+      const alertEmailInput = document.getElementById("alert-email");
+      const btnSaveAlerts = document.getElementById("btn-save-alerts");
+      const alertsSaved = document.getElementById("alerts-saved");
+
+      btnSaveAlerts.addEventListener("click", async () => {
+        try {
+          await api("/api/settings", {
+            method: "PUT",
+            body: JSON.stringify({ alertEmail: alertEmailInput.value }),
+          });
+          alertsSaved.hidden = false;
+          setTimeout(() => { alertsSaved.hidden = true; }, 2500);
+        } catch (err) {
+          showErr(err.message);
+        }
       });
 
       (function () {

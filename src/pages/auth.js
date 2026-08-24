@@ -224,6 +224,51 @@ export function renderForgotPage({ error, email, sent }) {
   });
 }
 
+export function renderChangePasswordPage({ user, error }) {
+  return shell({
+    title: "Cambiar contraseña — DNS Monitor",
+    user,
+    content: `
+      <section class="auth-card blue">
+        <span class="auth-emoji">🔐</span>
+        <h1>Cambiar contraseña</h1>
+        <p class="auth-sub">Confirmá tu contraseña actual y elegí una nueva.</p>
+        ${
+          error
+            ? `<div class="alert red" role="alert">⚠️ ${esc(error)}</div>`
+            : ""
+        }
+        <form method="post" action="/change-password" class="auth-form">
+          <label class="field">
+            <span>Contraseña actual</span>
+            <div class="pass-field">
+              <input type="password" name="current" required autocomplete="current-password" placeholder="Tu contraseña actual" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Contraseña nueva</span>
+            <div class="pass-field">
+              <input type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Repetí la contraseña nueva</span>
+            <div class="pass-field">
+              <input type="password" name="password2" required minlength="8" autocomplete="new-password" placeholder="Repetí la contraseña" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
+          </label>
+          <button type="submit" class="btn blue btn-block">Cambiar contraseña</button>
+        </form>
+        <p class="auth-foot"><a class="link" href="/app">Volver al dashboard</a></p>
+      </section>
+      ${wordmarkRainbow()}
+    `,
+  });
+}
+
 export function renderResetPage({ error, token }) {
   return shell({
     title: "Nueva contraseña — DNS Monitor",

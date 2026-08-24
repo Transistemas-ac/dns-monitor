@@ -933,6 +933,15 @@ pre .ok {
   margin-bottom: 0.35rem;
 }
 
+.field span .link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+.field span .link:hover {
+  text-decoration: underline;
+}
+
 .field input,
 .field select {
   width: 100%;
@@ -1113,6 +1122,76 @@ pre .ok {
   font-size: 0.9rem;
 }
 
+/* ---- Dropdown del usuario en el navbar ---- */
+.nav-user-wrap {
+  position: relative;
+}
+
+.nav-user-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-gray);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-inner);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.nav-user-btn:hover {
+  color: var(--text);
+  background: var(--card-hover);
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-inner);
+  box-shadow: var(--shadow-hover);
+  min-width: 220px;
+  padding: 0.5rem;
+  z-index: 200;
+}
+
+.user-menu a {
+  display: block;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-inner);
+  color: var(--text-gray);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.user-menu a:hover {
+  background: var(--card-hover);
+  color: var(--text);
+}
+
+/* ---- Hint bajo campos del formulario ---- */
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 0.35rem;
+}
+.field-hint .link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+.field-hint .link:hover {
+  text-decoration: underline;
+}
+
 /* ---- Cards de dominio ---- */
 .domain-card .body {
   display: flex;
@@ -1209,6 +1288,10 @@ pre .ok {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+}
+
+#btn-close-alerts {
+  margin-top: 1.25rem;
 }
 
 @media (max-width: 768px) {

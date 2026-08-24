@@ -43,7 +43,7 @@ export async function createSession(env, { tokenHash, userId, expiresAt }) {
 
 export async function getSessionUser(env, tokenHash) {
   const { results } = await env.DB.prepare(
-    `SELECT u.id, u.email, s.expires_at
+    `SELECT u.id, u.email, u.alert_email, s.expires_at
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`
   )
@@ -249,6 +249,21 @@ export async function updateUserPassword(env, userId, passwordHash, salt) {
   await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?")
     .bind(userId)
     .run();
+}
+
+/* ---------- Settings del usuario (sección Alertas) ---------- */
+
+export async function updateUserAlertEmail(env, userId, alertEmail) {
+  await env.DB.prepare("UPDATE users SET alert_email = ? WHERE id = ?")
+    .bind(alertEmail, userId)
+    .run();
+}
+
+export async function getAllAlertEmails(env) {
+  const { results } = await env.DB.prepare(
+    "SELECT alert_email FROM users WHERE alert_email IS NOT NULL AND alert_email != ''"
+  ).all();
+  return results.map((r) => r.alert_email);
 }
 
 /* ---------- Limpieza de estado KV al eliminar un dominio ---------- */
