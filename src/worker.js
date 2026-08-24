@@ -158,6 +158,7 @@ async function handleFetch(request, env) {
       const userId = await createUser(env, { email, passwordHash: hashHex, salt: saltHex });
 
       const verificationSent = await sendVerificationEmail(env, request, userId, email);
+      await sendWelcomeEmail(env, request, email);
       if (verificationSent) {
         return redirect(`/verify-sent?email=${encodeURIComponent(email)}`);
       }
@@ -412,6 +413,34 @@ async function sendVerificationEmail(env, request, userId, email) {
   });
 }
 
+async function sendWelcomeEmail(env, request, email) {
+  if (!env.RESEND_API_KEY) return false;
+  const origin = new URL(request.url).origin;
+  return sendSystemEmail(env, request, {
+    to: email,
+    subject: "Te damos la bienvenida a DNS Monitor 🛰️",
+    text:
+      "¡Hola!\n\n" +
+      "Tu cuenta en DNS Monitor se creó con éxito. Estos son tus próximos pasos:\n\n" +
+      "1. Confirmá tu email con el link que te enviamos aparte.\n" +
+      "2. Conectá tu token de Cloudflare y tu API key de Resend desde el dashboard.\n" +
+      "3. Agregá tus dominios. El monitor los vigila cada 10 minutos y te avisa por email ante cualquier cambio.\n\n" +
+      "Cualquier duda, respondé este correo.\n\n" +
+      "— Equipo de DNS Monitor",
+    html: emailHtml(
+      "Te damos la bienvenida 🛰️",
+      "Tu cuenta en DNS Monitor se creó con éxito. Estos son tus próximos pasos:",
+      `${origin}/login`,
+      "Ir a mi dashboard",
+      [
+        "Confirmá tu email con el link que te enviamos aparte",
+        "Conectá tu token de Cloudflare y tu API key de Resend",
+        "Agregá tus dominios: los vigilamos cada 10 minutos y te avisamos por email ante cualquier cambio",
+      ]
+    ),
+  });
+}
+
 async function sendResetEmail(env, request, userId, email) {
   if (!env.RESEND_API_KEY) return false;
   const token = randomToken();
@@ -438,7 +467,16 @@ async function sendResetEmail(env, request, userId, email) {
   });
 }
 
-function emailHtml(title, body, link, buttonLabel) {
+function emailHtml(title, body, link, buttonLabel, steps) {
+  const stepsHtml = Array.isArray(steps) && steps.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 20px">
+         ${steps.map((s, i) =>
+           `<tr><td style="padding:7px 0;color:#b8b8b7;font-size:14px;line-height:1.55;border-top:1px solid #3a3a39">
+              <span style="display:inline-block;background:#54b4f0;color:#1b1b1a;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-weight:bold;font-size:12px;margin-right:10px">${i + 1}</span>${s}
+            </td></tr>`
+         ).join("")}
+       </table>`
+    : "";
   return `<!doctype html>
 <html lang="es">
 <body style="margin:0;background:#1b1b1a;font-family:Arial,sans-serif;padding:32px 16px">
@@ -450,6 +488,7 @@ function emailHtml(title, body, link, buttonLabel) {
             <div style="font-size:40px">🛰️</div>
             <h1 style="font-family:Arial,sans-serif;color:#fefffe;font-size:22px;margin:12px 0 8px">${title}</h1>
             <p style="color:#b8b8b7;font-size:15px;line-height:1.6;margin:0 0 20px">${body}</p>
+            ${stepsHtml}
             <a href="${link}" style="display:inline-block;background:#fe98cc;color:#1b1b1a;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:20px;font-size:15px">${buttonLabel}</a>
             <p style="color:#8a8a89;font-size:12px;margin:20px 0 0">DNS Monitor — <a href="https://dns.transistemas.org" style="color:#54b4f0">dns.transistemas.org</a></p>
           </td>
