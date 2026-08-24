@@ -48,24 +48,40 @@ function maskSecrets(domain) {
 }
 
 async function validateCfToken({ zoneId, zoneName, cfToken }) {
-  const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}`, {
-    headers: { Authorization: `Bearer ${cfToken}` },
+  const headers = { Authorization: `Bearer ${cfToken}` };
+
+  /* 1) GET /zones/{id} valida acceso + nombre de zona, pero exige Zone → Zone → Read. */
+  const zoneRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}`, {
+    headers,
   });
-  if (!res.ok) {
-    const status = res.status;
-    if (status === 403 || status === 401) {
-      throw new Error("El token de Cloudflare no tiene acceso a esa zona (permisos Zone → DNS → Read).");
+  if (zoneRes.ok) {
+    const data = await zoneRes.json();
+    const zoneNameFromApi = data.result?.name;
+    if (zoneNameFromApi) {
+      if (zoneNameFromApi.toLowerCase() !== zoneName.trim().toLowerCase()) {
+        throw new Error(`El zoneId corresponde a "${zoneNameFromApi}", no a "${zoneName}".`);
+      }
+      return;
     }
-    throw new Error(`Cloudflare respondió HTTP ${status}. Revisá el zoneId.`);
   }
-  const data = await res.json();
-  const zone = data.result;
-  if (!zone) {
-    throw new Error("No se encontró la zona en tu cuenta de Cloudflare.");
+
+  /* 2) Fallback: el endpoint que usa el monitor (Zone → DNS → Read).
+     Si responde OK, el monitoreo puede operar aunque falte Zone → Zone → Read. */
+  const dnsRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?per_page=1`,
+    { headers }
+  );
+  if (dnsRes.ok) return;
+
+  if (zoneRes.status === 401 || dnsRes.status === 401) {
+    throw new Error("El token de Cloudflare es inválido (401).");
   }
-  if (zone.name.toLowerCase() !== zoneName.trim().toLowerCase()) {
-    throw new Error(`El zoneId corresponde a "${zone.name}", no a "${zoneName}".`);
+  if (zoneRes.status === 404 || dnsRes.status === 404) {
+    throw new Error("No se encontró ninguna zona con ese zoneId en tu cuenta de Cloudflare.");
   }
+  throw new Error(
+    "El token no tiene acceso a esa zona. Verificá que el token tenga el permiso Zone → DNS → Read y que la zona esté incluida en su alcance."
+  );
 }
 
 async function validateResendKey(resendKey) {
