@@ -64,12 +64,19 @@ export function appShell({ user, active = "", content, script, title }) {
 
       const menuBtn = document.getElementById("user-menu-btn");
       const menu = document.getElementById("user-menu");
+      const mq = window.matchMedia("(min-width: 769px)");
+      function isDesktop() { return mq.matches; }
       menuBtn.addEventListener("click", function (ev) {
+        if (!isDesktop()) return;       // en mobile el email no hace nada
         ev.stopPropagation();
         menu.hidden = !menu.hidden;
       });
       document.addEventListener("click", function (ev) {
+        if (!isDesktop()) return;       // en mobile el menú queda siempre visible
         if (!ev.target.closest(".nav-user-wrap")) menu.hidden = true;
+      });
+      mq.addEventListener("change", function () {
+        if (!isDesktop()) menu.hidden = true;   // al pasar a mobile, limpiar estado
       });
 
       document.querySelectorAll(".pass-toggle").forEach(function (btn) {
