@@ -213,19 +213,6 @@ export function renderDashboardPage({ user }) {
       }
     }
 
-    async function loadDomains() {
-      try {
-        clearErr();
-        const { domains } = await api("/api/domains");
-        grid.querySelectorAll(".domain-card").forEach((n) => n.remove());
-        empty.hidden = domains.length > 0;
-        domains.forEach(renderDomain);
-      } catch (err) {
-        showErr(err.message);
-      }
-    }
-
-    const form = document.getElementById("domain-form");
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const id = form.elements.id.value;
@@ -319,8 +306,6 @@ export function renderDashboardPage({ user }) {
     document.getElementById("btn-close-alerts").addEventListener("click", () => {
       document.getElementById("alerts-section").hidden = true;
     });
-
-    document.getElementById("btn-new").addEventListener("click", () => openForm(null));
 
     document.addEventListener("click", (ev) => {
       if (!ev.target.closest(".emoji-picker") && !ev.target.closest("[data-emoji-open]")) {

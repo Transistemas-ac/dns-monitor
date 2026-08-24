@@ -23,7 +23,10 @@ export function appShell({ user, active = "", content, script, title }) {
 <body>
   <nav class="navbar">
     <a class="wordmark" href="/" title="DNS Monitor">DNS MONITOR</a>
-    <ul class="nav-links">
+    <button type="button" class="nav-hamburger" id="nav-hamburger" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="nav-links">
       <li><a href="/app" class="${active === "dashboard" ? "nav-active" : ""}">Monitor</a></li>
       <li><a href="/app/alertas" class="${active === "alertas" ? "nav-active" : ""}">Alertas</a></li>
       <li>
@@ -44,6 +47,20 @@ export function appShell({ user, active = "", content, script, title }) {
 
   <script>
     (function () {
+      var hamburger = document.getElementById("nav-hamburger");
+      var navLinks = document.getElementById("nav-links");
+      hamburger.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        navLinks.classList.toggle("nav-open");
+        hamburger.classList.toggle("is-active");
+      });
+      document.addEventListener("click", function (ev) {
+        if (!ev.target.closest(".navbar")) {
+          navLinks.classList.remove("nav-open");
+          hamburger.classList.remove("is-active");
+        }
+      });
+
       const menuBtn = document.getElementById("user-menu-btn");
       const menu = document.getElementById("user-menu");
       menuBtn.addEventListener("click", function (ev) {
