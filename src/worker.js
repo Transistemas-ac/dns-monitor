@@ -29,6 +29,7 @@ import {
   deleteToken,
   deleteTokensForUser,
   getAllAlertEmails,
+  getAllChannels,
   getAllDomains,
   getTokenUser,
   getUserByEmail,
@@ -69,7 +70,9 @@ import {
   handleApiDomainItem,
   handleApiDomains,
 } from "./api/domains.js";
+import { handleApiChannels } from "./api/channels.js";
 import { handleApiSettings } from "./api/settings.js";
+import sendToChannels from "./utils/sendToChannels.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -121,6 +124,10 @@ async function handleFetch(request, env) {
 
     if (url.pathname === "/api/settings") {
       return handleApiSettings(env, request, user);
+    }
+
+    if (url.pathname.startsWith("/api/channels")) {
+      return handleApiChannels(env, request, user);
     }
 
     const match = url.pathname.match(/^\/api\/domains\/(\d+)(\/alerts)?$/);
@@ -591,6 +598,15 @@ async function runCheck(env) {
   const domains = await getDomains(env);
   const targets = getMailTargets(domains);
 
+  const channelsByUser = new Map();
+  if (env.DB) {
+    const allChannels = await getAllChannels(env);
+    for (const ch of allChannels) {
+      if (!channelsByUser.has(ch.user_id)) channelsByUser.set(ch.user_id, []);
+      channelsByUser.get(ch.user_id).push(ch);
+    }
+  }
+
   const heartbeatSection = await checkMissedRuns(env);
   const globalSections = heartbeatSection ? [heartbeatSection] : [];
 
@@ -628,6 +644,15 @@ async function runCheck(env) {
           userId: domain.userId,
           subject,
           sections: sections.map((s) => ({ title: s.title, lines: s.lines })),
+        });
+      }
+
+      const channelSections = sections.map((s) => ({ title: s.title, lines: s.lines }));
+      for (const ch of channelsByUser.get(domain.userId) || []) {
+        await sendToChannels(env, ch, {
+          subject,
+          domain: domain.zoneName,
+          sections: channelSections,
         });
       }
 
@@ -684,6 +709,17 @@ async function runCheck(env) {
           console.error(`No se pudo enviar el correo global a ${to}:`, err);
         }
       }
+    }
+  }
+
+  /* Alertas globales a todos los canales configurados. */
+  for (const ch of [...channelsByUser.values()].flat()) {
+    for (const section of globalSections) {
+      await sendToChannels(env, ch, {
+        subject: `🚨 ${section.title}`,
+        domain: "Monitor global",
+        sections: [{ title: section.title, lines: section.lines }],
+      });
     }
   }
 }

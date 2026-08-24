@@ -266,6 +266,45 @@ export async function getAllAlertEmails(env) {
   return results.map((r) => r.alert_email);
 }
 
+/* ---------- Canales de alerta (telegram / discord / webhook) ---------- */
+
+export async function upsertChannel(env, { userId, type, name, configEnc, configIv, enabled }) {
+  const res = await env.DB.prepare(
+    `INSERT INTO alert_channels (user_id, type, name, config_enc, config_iv, enabled, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, type) DO UPDATE SET
+       name = excluded.name,
+       config_enc = excluded.config_enc,
+       config_iv = excluded.config_iv,
+       enabled = excluded.enabled`
+  )
+    .bind(userId, type, name || null, configEnc, configIv, enabled ? 1 : 0, Date.now())
+    .run();
+  return res.meta.last_row_id;
+}
+
+export async function listChannels(env, userId) {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM alert_channels WHERE user_id = ? ORDER BY type"
+  )
+    .bind(userId)
+    .all();
+  return results;
+}
+
+export async function deleteChannel(env, userId, type) {
+  await env.DB.prepare("DELETE FROM alert_channels WHERE user_id = ? AND type = ?")
+    .bind(userId, type)
+    .run();
+}
+
+export async function getAllChannels(env) {
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM alert_channels WHERE enabled = 1"
+  ).all();
+  return results;
+}
+
 /* ---------- Limpieza de estado KV al eliminar un dominio ---------- */
 
 const KV_STATE_KEYS = [
