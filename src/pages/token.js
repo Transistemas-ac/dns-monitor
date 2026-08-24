@@ -34,8 +34,10 @@ export function renderTokenPage({ user }) {
               </div>
             </label>
             <p class="form-note">El token se guarda cifrado en tu cuenta. Si ya tenés uno configurado, podés dejar el campo vacío para no cambiarlo, o ingresar uno nuevo para reemplazarlo.</p>
-            <button type="submit" class="btn pink">${hasToken ? "Actualizar token" : "Guardar token"}</button>
-            ${hasToken ? '<button type="button" class="btn red" id="btn-delete-token">Eliminar token</button>' : ""}
+            <div class="token-actions">
+              <button type="submit" class="btn pink">${hasToken ? "Actualizar token" : "Guardar token"}</button>
+              ${hasToken ? '<button type="button" class="btn red" id="btn-delete-token">Eliminar token</button>' : ""}
+            </div>
           </form>
         </div>
       </article>
@@ -48,8 +50,7 @@ export function renderTokenPage({ user }) {
       <article class="feature-card blue">
         <div class="body">
           <ol class="token-steps">
-            <li>Ingresá a tu cuenta de Cloudflare y andá a <strong>My Profile → API Tokens</strong>, o usá este link directo:
-              <a class="link" href="https://developers.cloudflare.com/fundamentals/api/get-started/create-token/" target="_blank" rel="noopener">Crear un token de API →</a>
+            <li>Ingresá a tu cuenta de Cloudflare y andá a <strong>My Profile → API Tokens</strong>
             </li>
             <li>Tocá <strong>"Create Token"</strong>.</li>
             <li>Elegí <strong>"Create Custom Token"</strong>.</li>
