@@ -47,6 +47,15 @@ function maskSecrets(domain) {
   };
 }
 
+async function cfErrorDetail(res) {
+  try {
+    const data = await res.json();
+    return data.errors || [];
+  } catch {
+    return [];
+  }
+}
+
 async function validateCfToken({ zoneId, zoneName, cfToken }) {
   const headers = { Authorization: `Bearer ${cfToken}` };
 
@@ -73,11 +82,22 @@ async function validateCfToken({ zoneId, zoneName, cfToken }) {
   );
   if (dnsRes.ok) return;
 
+  /* 3) Diagnóstico con los códigos de error de Cloudflare. */
+  const [zoneErrors, dnsErrors] = await Promise.all([cfErrorDetail(zoneRes), cfErrorDetail(dnsRes)]);
+  const errors = [...zoneErrors, ...dnsErrors];
+  const codes = new Set(errors.map((e) => e.code));
+  const messages = errors.map((e) => e.message).filter(Boolean);
+
+  if (codes.has(9109)) {
+    throw new Error(
+      "Ese zoneId no corresponde a ninguna zona de tu cuenta de Cloudflare. Copialo desde Cloudflare → Overview → API → Zone ID (o revisá que la zona esté incluida en el alcance del token)."
+    );
+  }
+  if (codes.has(10000) || messages.some((m) => /auth/i.test(m))) {
+    throw new Error("El token de Cloudflare es inválido o no incluye esa zona en su alcance.");
+  }
   if (zoneRes.status === 401 || dnsRes.status === 401) {
     throw new Error("El token de Cloudflare es inválido (401).");
-  }
-  if (zoneRes.status === 404 || dnsRes.status === 404) {
-    throw new Error("No se encontró ninguna zona con ese zoneId en tu cuenta de Cloudflare.");
   }
   throw new Error(
     "El token no tiene acceso a esa zona. Verificá que el token tenga el permiso Zone → DNS → Read y que la zona esté incluida en su alcance."
