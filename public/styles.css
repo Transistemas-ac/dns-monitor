@@ -1136,7 +1136,7 @@ pre .ok {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .domain-form-inline .inline-inputs {
@@ -1145,6 +1145,7 @@ pre .ok {
   gap: 1rem;
   flex: 1;
   min-width: 0;
+  max-width: 360px;
 }
 
 .domain-form-inline .inline-inputs .field {
