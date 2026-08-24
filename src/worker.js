@@ -74,10 +74,10 @@ import {
 import { handleApiChannels } from "./api/channels.js";
 import { handleApiSettings } from "./api/settings.js";
 import sendToChannels from "./utils/sendToChannels.js";
+import { emailHtml, sendSystemEmail, SYSTEM_MAIL_FROM } from "./utils/systemEmail.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SYSTEM_MAIL_FROM = "DNS Monitor <no-reply@transistemas.org>";
 
 export default {
   async scheduled(event, env, ctx) {
@@ -123,7 +123,7 @@ async function handleFetch(request, env) {
       return handleApiDomains(env, request, user);
     }
 
-    if (url.pathname === "/api/settings") {
+    if (url.pathname === "/api/settings" || url.pathname === "/api/settings/test") {
       return handleApiSettings(env, request, user);
     }
 
@@ -380,27 +380,6 @@ async function handleFetch(request, env) {
 
 /* ---------- Emails de sistema (operador: RESEND_API_KEY + SYSTEM_MAIL_FROM) ---------- */
 
-async function sendSystemEmail(env, request, { to, subject, text, html }) {
-  if (!env.RESEND_API_KEY) {
-    console.log("Email de sistema no enviado (RESEND_API_KEY no configurado):", subject);
-    return false;
-  }
-  try {
-    await sendEmail({
-      apiKey: env.RESEND_API_KEY,
-      from: env.SYSTEM_MAIL_FROM || SYSTEM_MAIL_FROM,
-      to,
-      subject,
-      text,
-      html,
-    });
-    return true;
-  } catch (err) {
-    console.error("Error enviando email de sistema:", err.message);
-    return false;
-  }
-}
-
 async function sendVerificationEmail(env, request, userId, email) {
   if (!env.RESEND_API_KEY) return false;
   const token = randomToken();
@@ -437,7 +416,7 @@ async function sendWelcomeEmail(env, request, email) {
       "¡Hola!\n\n" +
       "Tu cuenta en DNS Monitor se creó con éxito. Estos son tus próximos pasos:\n\n" +
       "1. Confirmá tu email con el link que te enviamos aparte.\n" +
-      "2. Conectá tu token de Cloudflare y tu API key de Resend desde el dashboard.\n" +
+      "2. Conectá tu token de Cloudflare desde el dashboard.\n" +
       "3. Agregá tus dominios. El monitor los vigila cada 10 minutos y te avisa por email ante cualquier cambio.\n\n" +
       "Cualquier duda, respondé este correo.\n\n" +
       "— Equipo de DNS Monitor",
@@ -448,7 +427,7 @@ async function sendWelcomeEmail(env, request, email) {
       "Ir a mi dashboard",
       [
         "Confirmá tu email con el link que te enviamos aparte",
-        "Conectá tu token de Cloudflare y tu API key de Resend",
+        "Conectá tu token de Cloudflare",
         "Agregá tus dominios: los vigilamos cada 10 minutos y te avisamos por email ante cualquier cambio",
       ]
     ),
@@ -481,52 +460,17 @@ async function sendResetEmail(env, request, userId, email) {
   });
 }
 
-function emailHtml(title, body, link, buttonLabel, steps) {
-  const stepsHtml = Array.isArray(steps) && steps.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 20px">
-         ${steps.map((s, i) =>
-           `<tr><td style="padding:10px 0;color:#b8b8b7;font-size:14px;line-height:1.55">
-              <span style="display:inline-block;background:#54b4f0;color:#1b1b1a;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-weight:bold;font-size:12px;margin-right:10px">${i + 1}</span>${s}
-            </td></tr>`
-         ).join("")}
-       </table>`
-    : "";
-  return `<!doctype html>
-<html lang="es">
-<body style="margin:0;background:#1b1b1a;font-family:Arial,sans-serif;padding:32px 16px">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:520px;background:#2a2a29;border-radius:16px;border:2px solid #3a3a39">
-        <tr>
-          <td style="padding:28px 32px;text-align:center">
-            <div style="font-size:40px">🛰️</div>
-            <h1 style="font-family:Arial,sans-serif;color:#fefffe;font-size:22px;margin:12px 0 8px">${title}</h1>
-            <p style="color:#b8b8b7;font-size:15px;line-height:1.6;margin:0 0 20px">${body}</p>
-            ${stepsHtml}
-            <a href="${link}" style="display:inline-block;background:#fe98cc;color:#1b1b1a;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:20px;font-size:15px">${buttonLabel}</a>
-            <p style="color:#8a8a89;font-size:12px;margin:20px 0 0">DNS Monitor — <a href="https://dns.transistemas.org" style="color:#54b4f0">dns.transistemas.org</a></p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
-
 /* ============================================================
    Motor de monitoreo (cron)
    ============================================================ */
 
-function domainFromRow(row, cfToken, resendKey) {
+function domainFromRow(row, cfToken) {
   return {
     id: row.id,
     userId: row.user_id,
     zoneId: row.zone_id,
     zoneName: row.zone_name,
     emoji: row.emoji || "🌍",
-    mailTo: row.mail_to,
-    mailFrom: row.mail_from,
     expiryAlertDays: JSON.parse(row.expiry_alert_days || "[60,30,14,7,1]"),
     expectMX: !!row.expect_mx,
     expectSPF: !!row.expect_spf,
@@ -534,8 +478,8 @@ function domainFromRow(row, cfToken, resendKey) {
     expectDKIM: !!row.expect_dkim,
     expectCAA: !!row.expect_caa,
     expectWeb: !!row.expect_web,
+    alertEmail: row.user_alert_email || row.user_email,
     cfToken,
-    resendKey,
   };
 }
 
@@ -547,8 +491,7 @@ async function getDomains(env) {
     for (const row of rows) {
       try {
         const cfToken = await decryptSecret(env, row.cf_token_enc, row.cf_token_iv);
-        const resendKey = await decryptSecret(env, row.resend_key_enc, row.resend_key_iv);
-        domains.push(domainFromRow(row, cfToken, resendKey));
+        domains.push(domainFromRow(row, cfToken));
       } catch (err) {
         console.error(`Secretos cifrados inválidos para ${row.zone_name}:`, err.message);
         await updateDomainStatus(env, row.id, {
@@ -586,25 +529,11 @@ async function getDomains(env) {
         d.mailTo &&
         d.mailFrom
     )
-    .map((d) => ({ ...d, cfToken: env.CF_API_TOKEN, resendKey: env.RESEND_API_KEY }));
-}
-
-function getMailTargets(domains) {
-  const seen = new Set();
-  const targets = [];
-  for (const d of domains) {
-    const k = `${d.mailTo}|${d.mailFrom}`;
-    if (!seen.has(k)) {
-      seen.add(k);
-      targets.push({ to: d.mailTo, from: d.mailFrom, resendKey: d.resendKey });
-    }
-  }
-  return targets;
+    .map((d) => ({ ...d, cfToken: env.CF_API_TOKEN }));
 }
 
 async function runCheck(env) {
   const domains = await getDomains(env);
-  const targets = getMailTargets(domains);
 
   const channelsByUser = new Map();
   if (env.DB) {
@@ -666,9 +595,9 @@ async function runCheck(env) {
 
       try {
         await sendEmail({
-          apiKey: domain.resendKey || env.RESEND_API_KEY,
-          from: domain.mailFrom,
-          to: domain.mailTo,
+          apiKey: env.RESEND_API_KEY,
+          from: env.SYSTEM_MAIL_FROM || SYSTEM_MAIL_FROM,
+          to: domain.alertEmail,
           subject,
           html: buildEmailBody(domain.zoneName, sections),
           text: buildEmailText(domain.zoneName, sections),
@@ -680,23 +609,6 @@ async function runCheck(env) {
   }
 
   await pingHealthchecks(env);
-
-  for (const section of globalSections) {
-    for (const t of targets) {
-      try {
-        await sendEmail({
-          apiKey: t.resendKey || env.RESEND_API_KEY,
-          from: t.from,
-          to: t.to,
-          subject: `🚨 ${section.title}`,
-          html: buildEmailBody("Monitor global", [section]),
-          text: buildEmailText("Monitor global", [section]),
-        });
-      } catch (err) {
-        console.error(`No se pudo enviar el correo global a ${t.to}:`, err);
-      }
-    }
-  }
 
   /* Alertas globales a los emails configurados en la sección Alertas
      (usa el email de sistema del operador). */

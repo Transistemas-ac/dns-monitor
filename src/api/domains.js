@@ -14,7 +14,6 @@ import {
 import { encryptSecret } from "../crypto.js";
 import { jsonError, jsonOk } from "../auth.js";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ZONE_ID_RE = /^[0-9a-f]{32}$/i;
 
 async function readJson(request) {
@@ -31,8 +30,6 @@ function maskSecrets(domain) {
     zoneId: domain.zone_id,
     zoneName: domain.zone_name,
     emoji: domain.emoji || "🌍",
-    mailTo: domain.mail_to,
-    mailFrom: domain.mail_from,
     expiryAlertDays: JSON.parse(domain.expiry_alert_days || "[60,30,14,7,1]"),
     expectMX: !!domain.expect_mx,
     expectSPF: !!domain.expect_spf,
@@ -41,7 +38,6 @@ function maskSecrets(domain) {
     expectCAA: !!domain.expect_caa,
     expectWeb: !!domain.expect_web,
     hasCfToken: !!domain.cf_token_enc,
-    hasResendKey: !!domain.resend_key_enc,
     lastCheckTs: domain.last_check_ts,
     lastError: domain.last_error,
     createdAt: domain.created_at,
@@ -105,21 +101,10 @@ async function validateCfToken({ zoneId, zoneName, cfToken }) {
   );
 }
 
-async function validateResendKey(resendKey) {
-  const res = await fetch("https://api.resend.com/domains", {
-    headers: { Authorization: `Bearer ${resendKey}` },
-  });
-  if (!res.ok) {
-    throw new Error("La API key de Resend es inválida o no tiene permisos.");
-  }
-}
-
 function validateCommon(body) {
   const errors = [];
   if (!body.zoneId || !ZONE_ID_RE.test(body.zoneId)) errors.push("zoneId inválido (32 caracteres hexadecimales).");
   if (!body.zoneName || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(body.zoneName)) errors.push("zoneName inválido.");
-  if (!body.mailTo || !EMAIL_RE.test(body.mailTo)) errors.push("mailTo inválido.");
-  if (!body.mailFrom || !EMAIL_RE.test(body.mailFrom)) errors.push("mailFrom inválido.");
   if (errors.length) throw new Error(errors.join(" "));
 }
 
@@ -169,17 +154,14 @@ export async function handleApiDomains(env, request, user) {
         return jsonError(403, `Alcanzaste el límite de ${DB_QUOTA_DOMAINS} dominios del plan gratuito.`);
       }
       if (!body.cfToken) return jsonError(400, "El token de Cloudflare es obligatorio.");
-      if (!body.resendKey) return jsonError(400, "La API key de Resend es obligatoria.");
 
       await validateCfToken({
         zoneId: body.zoneId,
         zoneName: body.zoneName,
         cfToken: body.cfToken,
       });
-      await validateResendKey(body.resendKey);
 
       const cf = await encryptSecret(env, body.cfToken);
-      const rs = await encryptSecret(env, body.resendKey);
       const flags = flagsFromBody(body);
 
       const id = await createDomain(env, {
@@ -187,14 +169,10 @@ export async function handleApiDomains(env, request, user) {
         domain: {
           zoneId: body.zoneId.trim(),
           zoneName: body.zoneName.trim(),
-          mailTo: body.mailTo.trim(),
-          mailFrom: body.mailFrom.trim(),
           emoji: body.emoji || "🌍",
           ...flags,
           cfTokenEnc: cf.enc,
           cfTokenIv: cf.iv,
-          resendKeyEnc: rs.enc,
-          resendKeyIv: rs.iv,
         },
       });
 
@@ -226,13 +204,9 @@ export async function handleApiDomainItem(env, request, user, id) {
 
     try {
       const next = {
-        mailTo: body.mailTo ?? existing.mail_to,
-        mailFrom: body.mailFrom ?? existing.mail_from,
         emoji: body.emoji ?? (existing.emoji || "🌍"),
         ...flagsFromBody(body, existing),
       };
-      if (body.mailTo !== undefined && !EMAIL_RE.test(next.mailTo)) return jsonError(400, "mailTo inválido.");
-      if (body.mailFrom !== undefined && !EMAIL_RE.test(next.mailFrom)) return jsonError(400, "mailFrom inválido.");
 
       let cfTokenEnc = existing.cf_token_enc;
       let cfTokenIv = existing.cf_token_iv;
@@ -247,21 +221,10 @@ export async function handleApiDomainItem(env, request, user, id) {
         cfTokenIv = cf.iv;
       }
 
-      let resendKeyEnc = existing.resend_key_enc;
-      let resendKeyIv = existing.resend_key_iv;
-      if (body.resendKey) {
-        await validateResendKey(body.resendKey);
-        const rs = await encryptSecret(env, body.resendKey);
-        resendKeyEnc = rs.enc;
-        resendKeyIv = rs.iv;
-      }
-
       await updateDomain(env, domainId, user.id, {
         ...next,
         cfTokenEnc,
         cfTokenIv,
-        resendKeyEnc,
-        resendKeyIv,
       });
 
       const updated = await getDomain(env, domainId, user.id);

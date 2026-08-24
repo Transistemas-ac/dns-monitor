@@ -33,24 +33,9 @@ export function renderDashboardPage({ user }) {
             <input type="text" name="zoneName" required placeholder="example.com" />
           </label>
           <label class="field">
-            <span>Destinatario de alertas (mailTo)</span>
-            <input type="email" name="mailTo" required value="${esc(user.alertEmail || user.email)}" placeholder="admin@example.com" />
-          </label>
-          <label class="field">
-            <span>Remitente verificado en Resend (mailFrom)</span>
-            <input type="email" name="mailFrom" required placeholder="dns@example.com" />
-          </label>
-          <label class="field">
             <span>Token de Cloudflare</span>
             <div class="pass-field">
               <input type="password" name="cfToken" id="cfToken" autocomplete="new-password" placeholder="Pegá tu token (solo lectura)" />
-              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
-            </div>
-          </label>
-          <label class="field">
-            <span><a class="link" href="https://resend.com/api-keys" target="_blank" rel="noopener">API key de Resend</a></span>
-            <div class="pass-field">
-              <input type="password" name="resendKey" id="resendKey" autocomplete="new-password" placeholder="Pegá tu key" />
               <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
             </div>
           </label>
@@ -67,7 +52,7 @@ export function renderDashboardPage({ user }) {
           <label class="flag"><input type="checkbox" name="expectCAA" /> Alertar sin CAA</label>
           <label class="flag"><input type="checkbox" name="expectWeb" /> Web check (HTTPS)</label>
         </div>
-        <p class="form-note" id="secrets-note">🔐 Los tokens se cifran con AES-256 y nunca se muestran de nuevo. Solo se usan para leer tus zonas y enviar tus alertas.</p>
+        <p class="form-note" id="secrets-note">🔐 El token se cifra con AES-256 y nunca se muestra de nuevo. Solo se usa para leer tus zonas.</p>
         <div class="form-actions">
           <button type="submit" class="btn pink" id="btn-save">Guardar dominio</button>
           <button type="button" class="btn outline" id="btn-cancel">Cancelar</button>
@@ -177,7 +162,6 @@ export function renderDashboardPage({ user }) {
         '<div class="body domain-body">' +
         '<div class="domain-row">' + statusBadge(d) + "</div>" +
         (d.lastError ? '<div class="domain-row domain-error">' + esc(d.lastError) + "</div>" : "") +
-        '<div class="domain-row">📧 ' + esc(d.mailTo) + "</div>" +
         '<div class="domain-row">🏷️ ' + esc(flags.join(", ") || "—") + "</div>" +
         '<div class="domain-actions">' +
         '<button type="button" class="btn blue btn-small" data-act="history" data-id="' + d.id + '">Historial</button>' +
@@ -243,11 +227,10 @@ export function renderDashboardPage({ user }) {
       form.reset();
       form.elements.id.value = "";
       form.elements.cfToken.required = true;
-      form.elements.resendKey.required = true;
       form.elements.zoneId.disabled = false;
       form.elements.zoneName.disabled = false;
       document.getElementById("secrets-note").textContent =
-        "🔐 Los tokens se cifran con AES-256 y nunca se muestran de nuevo. Solo se usan para leer tus zonas y enviar tus alertas.";
+        "🔐 El token se cifra con AES-256 y nunca se muestra de nuevo. Solo se usa para leer tus zonas.";
       formTitle.textContent = "Agregar dominio";
       document.getElementById("btn-save").textContent = "Guardar dominio";
     }
@@ -267,8 +250,6 @@ export function renderDashboardPage({ user }) {
       form.elements.id.value = domain.id;
       form.elements.zoneId.value = domain.zoneId;
       form.elements.zoneName.value = domain.zoneName;
-      form.elements.mailTo.value = domain.mailTo;
-      form.elements.mailFrom.value = domain.mailFrom;
       form.elements.expiryAlertDays.value = (domain.expiryAlertDays || []).join(",");
       form.elements.expectMX.checked = domain.expectMX;
       form.elements.expectSPF.checked = domain.expectSPF;
@@ -277,11 +258,10 @@ export function renderDashboardPage({ user }) {
       form.elements.expectCAA.checked = domain.expectCAA;
       form.elements.expectWeb.checked = domain.expectWeb;
       form.elements.cfToken.required = false;
-      form.elements.resendKey.required = false;
       form.elements.zoneId.disabled = true;
       form.elements.zoneName.disabled = true;
       document.getElementById("secrets-note").textContent =
-        "🔐 Dejá los campos de token vacíos para mantener los actuales. Completalos solo para rotarlos.";
+        "🔐 Dejá el campo de token vacío para mantener el actual. Completalo solo para rotarlo.";
       formTitle.textContent = "Editar " + domain.zoneName;
       document.getElementById("btn-save").textContent = "Guardar cambios";
     }
@@ -292,10 +272,7 @@ export function renderDashboardPage({ user }) {
       const payload = {
         zoneId: form.elements.zoneId.value,
         zoneName: form.elements.zoneName.value,
-        mailTo: form.elements.mailTo.value,
-        mailFrom: form.elements.mailFrom.value,
         cfToken: form.elements.cfToken.value || undefined,
-        resendKey: form.elements.resendKey.value || undefined,
         expiryAlertDays: String(form.elements.expiryAlertDays.value || "60,30,14,7,1")
           .split(",").map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n)),
         expectMX: form.elements.expectMX.checked,

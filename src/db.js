@@ -74,15 +74,13 @@ export async function createDomain(env, { userId, domain }) {
     `INSERT INTO domains
       (user_id, zone_id, zone_name, mail_to, mail_from, expiry_alert_days,
        expect_mx, expect_spf, expect_dmarc, expect_dkim, expect_caa, expect_web,
-       cf_token_enc, cf_token_iv, resend_key_enc, resend_key_iv, emoji, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       cf_token_enc, cf_token_iv, emoji, created_at)
+     VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       userId,
       domain.zoneId,
       domain.zoneName,
-      domain.mailTo,
-      domain.mailFrom,
       JSON.stringify(domain.expiryAlertDays || [60, 30, 14, 7, 1]),
       domain.expectMX ? 1 : 0,
       domain.expectSPF ? 1 : 0,
@@ -92,8 +90,6 @@ export async function createDomain(env, { userId, domain }) {
       domain.expectWeb ? 1 : 0,
       domain.cfTokenEnc,
       domain.cfTokenIv,
-      domain.resendKeyEnc,
-      domain.resendKeyIv,
       domain.emoji || "🌍",
       Date.now()
     )
@@ -122,15 +118,13 @@ export async function getDomain(env, id, userId) {
 export async function updateDomain(env, id, userId, fields) {
   await env.DB.prepare(
     `UPDATE domains SET
-       mail_to = ?, mail_from = ?, expiry_alert_days = ?,
+       expiry_alert_days = ?,
        expect_mx = ?, expect_spf = ?, expect_dmarc = ?, expect_dkim = ?,
        expect_caa = ?, expect_web = ?, emoji = ?,
-       cf_token_enc = ?, cf_token_iv = ?, resend_key_enc = ?, resend_key_iv = ?
+       cf_token_enc = ?, cf_token_iv = ?
      WHERE id = ? AND user_id = ?`
   )
     .bind(
-      fields.mailTo,
-      fields.mailFrom,
       JSON.stringify(fields.expiryAlertDays || [60, 30, 14, 7, 1]),
       fields.expectMX ? 1 : 0,
       fields.expectSPF ? 1 : 0,
@@ -141,8 +135,6 @@ export async function updateDomain(env, id, userId, fields) {
       fields.emoji || "🌍",
       fields.cfTokenEnc,
       fields.cfTokenIv,
-      fields.resendKeyEnc,
-      fields.resendKeyIv,
       id,
       userId
     )
@@ -165,7 +157,7 @@ export async function updateDomainStatus(env, id, { lastCheckTs, lastError }) {
 
 export async function getAllDomains(env) {
   const { results } = await env.DB.prepare(
-    `SELECT d.*, u.email AS user_email
+    `SELECT d.*, u.email AS user_email, u.alert_email AS user_alert_email
      FROM domains d JOIN users u ON u.id = d.user_id`
   ).all();
   return results;

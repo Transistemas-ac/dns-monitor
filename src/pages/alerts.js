@@ -32,9 +32,10 @@ export function renderAlertsPage({ user }) {
               <span>Email donde querés recibir las alertas</span>
               <input type="email" id="alert-email" value="${esc(user.alertEmail || user.email)}" placeholder="vos@tudominio.com" />
             </label>
-            <p class="form-note">Se usa como destinatario por defecto al agregar dominios y para las alertas del monitor.</p>
+            <p class="form-note">Todas las alertas de tus dominios llegan acá, enviadas desde dns@transistemas.org.</p>
             <div class="form-actions">
               <button type="button" class="btn green btn-small" id="btn-save-alerts">Guardar</button>
+              <button type="button" class="btn blue btn-small" id="btn-test-alerts">Probar</button>
             </div>
           </div>
         </article>
@@ -160,6 +161,18 @@ export function renderAlertsPage({ user }) {
         });
         alertsSaved.hidden = false;
         setTimeout(() => { alertsSaved.hidden = true; }, 2500);
+      } catch (err) {
+        showErr(err.message);
+      }
+    });
+
+    document.getElementById("btn-test-alerts").addEventListener("click", async () => {
+      try {
+        await api("/api/settings/test", {
+          method: "POST",
+          body: JSON.stringify({ alertEmail: alertEmailInput.value }),
+        });
+        showOk("Email de prueba enviado ✓");
       } catch (err) {
         showErr(err.message);
       }

@@ -2,6 +2,7 @@
 
 import { jsonError, jsonOk } from "../auth.js";
 import { updateUserAlertEmail } from "../db.js";
+import { emailHtml, sendSystemEmail } from "../utils/systemEmail.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,6 +24,33 @@ export async function handleApiSettings(env, request, user) {
     }
     await updateUserAlertEmail(env, user.id, email || null);
     return jsonOk({ settings: { alertEmail: email } });
+  }
+
+  if (request.method === "POST" && request.url.endsWith("/test")) {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+    const email = String(body.alertEmail || "").trim().toLowerCase();
+    const to = email && EMAIL_RE.test(email) ? email : user.alert_email || user.email;
+
+    const sent = await sendSystemEmail(env, request, {
+      to,
+      subject: "DNS Monitor — prueba de alertas por email",
+      text: "🔔 Si recibís este correo, tus alertas por email están configuradas correctamente. No respondas a este mensaje.",
+      html: emailHtml(
+        "Prueba de alertas por email",
+        "🔔 Si estás viendo este correo, tus alertas por email están configuradas correctamente.",
+        `${new URL(request.url).origin}/app/alertas`,
+        "Volver a las alertas"
+      ),
+    });
+    if (!sent) {
+      return jsonError(400, "No se pudo enviar el email de prueba (revisá la configuración del operador).");
+    }
+    return jsonOk({ tested: true });
   }
 
   return jsonError(405, "Método no permitido.");
