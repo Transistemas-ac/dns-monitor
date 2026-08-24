@@ -23,6 +23,9 @@ directory = "./public"
 crons = ["*/10 * * * *"]
 
 [vars]
+# Remitente de los emails de sistema (debe estar verificado en Resend del operador).
+SYSTEM_MAIL_FROM = "DNS Monitor <dns@transistemas.org>"
+
 # Modo self-host (solo se usa si no hay base de datos D1 configurada).
 # En modo SaaS los dominios y secretos se gestionan desde el dashboard (/register).
 # ⚠️ Estos valores son un ejemplo para transistemas.org - cambialos por tu propio dominio y tus correos.
