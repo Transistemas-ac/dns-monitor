@@ -1147,6 +1147,7 @@ pre .ok {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+  justify-content: center;
 }
 
 .domain-form-inline .inline-inputs {
@@ -1183,12 +1184,13 @@ pre .ok {
 .dash-head {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1.75rem;
   max-width: calc(50% - 0.75rem);
   width: 100%;
+  text-align: center;
 }
 
 .dash-top > .domain-form-inline {
