@@ -242,7 +242,6 @@ export function renderDashboardPage({ user }) {
         formPanel.hidden = false;
         if (!domain) {
           resetFields();
-          formPanel.scrollIntoView({ behavior: "smooth" });
           return;
         }
         form.elements.id.value = domain.id;
@@ -265,7 +264,6 @@ export function renderDashboardPage({ user }) {
           "🔐 Dejá los campos de token vacíos para mantener los actuales. Completalos solo para rotarlos.";
         formTitle.textContent = "Editar " + domain.zoneName;
         document.getElementById("btn-save").textContent = "Guardar cambios";
-        formPanel.scrollIntoView({ behavior: "smooth" });
       }
 
       form.addEventListener("submit", async (ev) => {
