@@ -59,7 +59,7 @@ export function renderDashboardPage({ user }) {
           </label>
           <label class="field">
             <span>Destinatario de alertas (mailTo)</span>
-            <input type="email" name="mailTo" required placeholder="admin@example.com" />
+            <input type="email" name="mailTo" required value="${esc(user.email)}" placeholder="admin@example.com" />
           </label>
           <label class="field">
             <span>Remitente verificado en Resend (mailFrom)</span>
