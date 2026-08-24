@@ -7,7 +7,7 @@ export default async function checkDnssec(env, domain) {
   let info;
   try {
     const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/dnssec`, {
-      headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` },
+      headers: { Authorization: `Bearer ${domain.cfToken}` },
     });
     if (res.status === 403) {
       console.error(`DNSSEC ${zoneName}: sin permisos (403), se omite`);

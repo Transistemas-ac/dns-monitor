@@ -23,15 +23,454 @@ import buildEmailBody, {
   buildNsSection,
 } from "./utils/buildEmailBody.js";
 
+import {
+  createToken,
+  createUser,
+  deleteToken,
+  deleteTokensForUser,
+  getAllDomains,
+  getTokenUser,
+  getUserByEmail,
+  insertAlert,
+  setUserVerified,
+  updateDomainStatus,
+  updateUserPassword,
+} from "./db.js";
+import {
+  decryptSecret,
+  hashPassword,
+  randomToken,
+  sha256Hex,
+  verifyPassword,
+} from "./crypto.js";
+import {
+  checkLoginRateLimit,
+  clearSessionCookie,
+  getCurrentUser,
+  isValidOrigin,
+  jsonError,
+  logoutSession,
+  startSession,
+} from "./auth.js";
+import { renderDashboardPage } from "./pages/dashboard.js";
+import {
+  renderForgotPage,
+  renderLoginPage,
+  renderMessagePage,
+  renderRegisterPage,
+  renderResetPage,
+  renderVerifySentPage,
+} from "./pages/auth.js";
+import {
+  handleApiAlerts,
+  handleApiDomainItem,
+  handleApiDomains,
+} from "./api/domains.js";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SYSTEM_MAIL_FROM = "DNS Monitor <no-reply@transistemas.org>";
 
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runCheck(env));
   },
+
+  async fetch(request, env, ctx) {
+    return handleFetch(request, env);
+  },
 };
 
-function getDomains(env) {
+/* ============================================================
+   HTTP (dashboard, auth, API)
+   ============================================================ */
+
+function html(body, status = 200) {
+  return new Response(body, {
+    status,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+function redirect(location, setCookie) {
+  const headers = { Location: location };
+  if (setCookie) headers["Set-Cookie"] = setCookie;
+  return new Response(null, { status: 302, headers });
+}
+
+async function handleFetch(request, env) {
+  const url = new URL(request.url);
+
+  if (request.method === "POST" && !isValidOrigin(request)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  /* ---------- API JSON ---------- */
+
+  if (url.pathname.startsWith("/api/")) {
+    const user = await getCurrentUser(env, request);
+    if (!user) return jsonError(401, "Necesitás iniciar sesión.");
+
+    if (url.pathname === "/api/domains") {
+      return handleApiDomains(env, request, user);
+    }
+
+    const match = url.pathname.match(/^\/api\/domains\/(\d+)(\/alerts)?$/);
+    if (match) {
+      if (match[2]) return handleApiAlerts(env, request, user, match[1]);
+      return handleApiDomainItem(env, request, user, match[1]);
+    }
+
+    return jsonError(404, "No encontrado.");
+  }
+
+  /* ---------- Páginas ---------- */
+
+  switch (url.pathname) {
+    case "/register": {
+      const user = await getCurrentUser(env, request);
+      if (user) return redirect("/app");
+      if (request.method !== "POST") return html(renderRegisterPage({}));
+
+      const form = await request.formData();
+      const email = String(form.get("email") || "").trim().toLowerCase();
+      const password = String(form.get("password") || "");
+
+      if (!EMAIL_RE.test(email)) {
+        return html(renderRegisterPage({ error: "Email inválido.", email }));
+      }
+      if (password.length < 8) {
+        return html(renderRegisterPage({ error: "La contraseña debe tener al menos 8 caracteres.", email }));
+      }
+      if (await getUserByEmail(env, email)) {
+        return html(renderRegisterPage({ error: "Ya existe una cuenta con ese email. Ingresá.", email }));
+      }
+
+      const { saltHex, hashHex } = await hashPassword(password);
+      const userId = await createUser(env, { email, passwordHash: hashHex, salt: saltHex });
+
+      const verificationSent = await sendVerificationEmail(env, request, userId, email);
+      if (verificationSent) {
+        return redirect(`/verify-sent?email=${encodeURIComponent(email)}`);
+      }
+
+      /* Sin email de sistema configurado (dev): la cuenta queda verificada. */
+      await setUserVerified(env, userId);
+      const cookie = await startSession(env, request, userId);
+      return redirect("/app", cookie);
+    }
+
+    case "/verify-sent": {
+      const email = url.searchParams.get("email") || "";
+      return html(renderVerifySentPage({ email }));
+    }
+
+    case "/verify": {
+      const token = url.searchParams.get("token");
+      if (!token) {
+        return html(renderMessagePage({
+          emoji: "😕",
+          title: "Link inválido",
+          message: "Falta el token de confirmación.",
+          ctaHref: "/login",
+          ctaLabel: "Ir a ingresar",
+        }));
+      }
+      const user = await getTokenUser(env, await sha256Hex(token), "verify");
+      if (!user) {
+        return html(renderMessagePage({
+          emoji: "😕",
+          title: "Link inválido o vencido",
+          message: "El link de confirmación expiró o ya fue usado. Podés reenviarlo desde el ingreso.",
+          ctaHref: "/login",
+          ctaLabel: "Ir a ingresar",
+        }));
+      }
+      await deleteToken(env, await sha256Hex(token));
+      await setUserVerified(env, user.id);
+      return html(renderMessagePage({
+        emoji: "✅",
+        title: "Email confirmado",
+        message: "Tu cuenta está verificada. Ya podés ingresar y agregar dominios.",
+        ctaHref: "/login",
+        ctaLabel: "Ingresar",
+      }));
+    }
+
+    case "/resend": {
+      const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
+      if (!email) return redirect("/login");
+      const account = await getUserByEmail(env, email);
+      if (account && !account.verified) {
+        await sendVerificationEmail(env, request, account.id, account.email);
+      }
+      return html(renderVerifySentPage({ email }));
+    }
+
+    case "/forgot": {
+      if (request.method !== "POST") return html(renderForgotPage({}));
+
+      const form = await request.formData();
+      const email = String(form.get("email") || "").trim().toLowerCase();
+
+      if (!EMAIL_RE.test(email)) {
+        return html(renderForgotPage({ error: "Email inválido.", email }));
+      }
+
+      const account = await getUserByEmail(env, email);
+      if (account) {
+        await sendResetEmail(env, request, account.id, account.email);
+      }
+      return html(renderForgotPage({ email, sent: true }));
+    }
+
+    case "/reset": {
+      if (request.method === "GET") {
+        const token = url.searchParams.get("token");
+        if (!token) {
+          return html(renderMessagePage({
+            emoji: "😕",
+            title: "Link inválido",
+            message: "Falta el token de recuperación.",
+            ctaHref: "/forgot",
+            ctaLabel: "Pedir otro link",
+          }));
+        }
+        const account = await getTokenUser(env, await sha256Hex(token), "reset");
+        if (!account) {
+          return html(renderMessagePage({
+            emoji: "😕",
+            title: "Link inválido o vencido",
+            message: "El link de recuperación expiró o ya fue usado. Pedí uno nuevo.",
+            ctaHref: "/forgot",
+            ctaLabel: "Pedir otro link",
+          }));
+        }
+        return html(renderResetPage({ token }));
+      }
+
+      const form = await request.formData();
+      const token = String(form.get("token") || "");
+      const password = String(form.get("password") || "");
+      const password2 = String(form.get("password2") || "");
+
+      if (password.length < 8) {
+        return html(renderResetPage({ error: "La contraseña debe tener al menos 8 caracteres.", token }));
+      }
+      if (password !== password2) {
+        return html(renderResetPage({ error: "Las contraseñas no coinciden.", token }));
+      }
+
+      const account = await getTokenUser(env, await sha256Hex(token), "reset");
+      if (!account) {
+        return html(renderResetPage({ error: "El link expiró o ya fue usado. Pedí uno nuevo.", token: "" }));
+      }
+
+      const { saltHex, hashHex } = await hashPassword(password);
+      await updateUserPassword(env, account.id, hashHex, saltHex);
+      await deleteToken(env, await sha256Hex(token));
+
+      return html(renderMessagePage({
+        emoji: "✅",
+        title: "Contraseña actualizada",
+        message: "Ya podés ingresar con tu contraseña nueva.",
+        ctaHref: "/login",
+        ctaLabel: "Ingresar",
+      }));
+    }
+
+    case "/login": {
+      const user = await getCurrentUser(env, request);
+      if (user) return redirect("/app");
+      if (request.method !== "POST") return html(renderLoginPage({}));
+
+      const form = await request.formData();
+      const email = String(form.get("email") || "").trim().toLowerCase();
+      const password = String(form.get("password") || "");
+
+      const rl = await checkLoginRateLimit(env, email, request);
+      if (rl.limited) {
+        return html(renderLoginPage({ error: "Demasiados intentos. Probá de nuevo en unos minutos.", email }));
+      }
+
+      const account = await getUserByEmail(env, email);
+      const valid = account && (await verifyPassword(password, account.salt, account.password_hash));
+      if (!valid) {
+        await rl.bump();
+        return html(renderLoginPage({ error: "Email o contraseña incorrectos.", email }));
+      }
+
+      if (!account.verified) {
+        return html(renderLoginPage({
+          error: "Confirmá tu email antes de ingresar.",
+          email,
+          unverified: true,
+        }));
+      }
+
+      const cookie = await startSession(env, request, account.id);
+      return redirect("/app", cookie);
+    }
+
+    case "/logout": {
+      await logoutSession(env, request);
+      return redirect("/", clearSessionCookie(request));
+    }
+
+    case "/app": {
+      const user = await getCurrentUser(env, request);
+      if (!user) return redirect("/login");
+      return html(renderDashboardPage({ user }));
+    }
+  }
+
+  return new Response("No encontrado", { status: 404 });
+}
+
+/* ---------- Emails de sistema (operador: RESEND_API_KEY + SYSTEM_MAIL_FROM) ---------- */
+
+async function sendSystemEmail(env, request, { to, subject, text, html }) {
+  if (!env.RESEND_API_KEY) {
+    console.log("Email de sistema no enviado (RESEND_API_KEY no configurado):", subject);
+    return false;
+  }
+  try {
+    await sendEmail({
+      apiKey: env.RESEND_API_KEY,
+      from: env.SYSTEM_MAIL_FROM || SYSTEM_MAIL_FROM,
+      to,
+      subject,
+      text,
+      html,
+    });
+    return true;
+  } catch (err) {
+    console.error("Error enviando email de sistema:", err.message);
+    return false;
+  }
+}
+
+async function sendVerificationEmail(env, request, userId, email) {
+  if (!env.RESEND_API_KEY) return false;
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  await deleteTokensForUser(env, userId, "verify");
+  await createToken(env, {
+    tokenHash,
+    userId,
+    type: "verify",
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  });
+  const origin = new URL(request.url).origin;
+  const link = `${origin}/verify?token=${encodeURIComponent(token)}`;
+  return sendSystemEmail(env, request, {
+    to: email,
+    subject: "Confirmá tu email — DNS Monitor",
+    text: `Confirmá tu cuenta de DNS Monitor tocando este link (válido por 24 h):\n\n${link}`,
+    html: emailHtml(
+      "Confirmá tu email",
+      "Tocá el botón para activar tu cuenta de DNS Monitor. El link vence en 24 horas.",
+      link,
+      "Confirmar mi email"
+    ),
+  });
+}
+
+async function sendResetEmail(env, request, userId, email) {
+  if (!env.RESEND_API_KEY) return false;
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  await deleteTokensForUser(env, userId, "reset");
+  await createToken(env, {
+    tokenHash,
+    userId,
+    type: "reset",
+    expiresAt: Date.now() + 60 * 60 * 1000,
+  });
+  const origin = new URL(request.url).origin;
+  const link = `${origin}/reset?token=${encodeURIComponent(token)}`;
+  return sendSystemEmail(env, request, {
+    to: email,
+    subject: "Recuperar contraseña — DNS Monitor",
+    text: `Para crear una contraseña nueva, tocá este link (válido por 1 hora):\n\n${link}\n\nSi no pediste este cambio, ignorá este correo.`,
+    html: emailHtml(
+      "Recuperar contraseña",
+      "Tocá el botón para crear una contraseña nueva. El link vence en 1 hora. Si no lo pediste vos, ignorá este correo.",
+      link,
+      "Crear nueva contraseña"
+    ),
+  });
+}
+
+function emailHtml(title, body, link, buttonLabel) {
+  return `<!doctype html>
+<html lang="es">
+<body style="margin:0;background:#1b1b1a;font-family:Arial,sans-serif;padding:32px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:520px;background:#2a2a29;border-radius:16px;border:2px solid #3a3a39">
+        <tr>
+          <td style="padding:28px 32px;text-align:center">
+            <div style="font-size:40px">🛰️</div>
+            <h1 style="font-family:Arial,sans-serif;color:#fefffe;font-size:22px;margin:12px 0 8px">${title}</h1>
+            <p style="color:#b8b8b7;font-size:15px;line-height:1.6;margin:0 0 20px">${body}</p>
+            <a href="${link}" style="display:inline-block;background:#fe98cc;color:#1b1b1a;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:20px;font-size:15px">${buttonLabel}</a>
+            <p style="color:#8a8a89;font-size:12px;margin:20px 0 0">DNS Monitor — <a href="https://dns.transistemas.org" style="color:#54b4f0">dns.transistemas.org</a></p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+/* ============================================================
+   Motor de monitoreo (cron)
+   ============================================================ */
+
+function domainFromRow(row, cfToken, resendKey) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    zoneId: row.zone_id,
+    zoneName: row.zone_name,
+    mailTo: row.mail_to,
+    mailFrom: row.mail_from,
+    expiryAlertDays: JSON.parse(row.expiry_alert_days || "[60,30,14,7,1]"),
+    expectMX: !!row.expect_mx,
+    expectSPF: !!row.expect_spf,
+    expectDMARC: !!row.expect_dmarc,
+    expectDKIM: !!row.expect_dkim,
+    expectCAA: !!row.expect_caa,
+    expectWeb: !!row.expect_web,
+    cfToken,
+    resendKey,
+  };
+}
+
+async function getDomains(env) {
+  /* Modo SaaS: los dominios y secretos viven en D1 (fuente de verdad). */
+  if (env.DB) {
+    const rows = await getAllDomains(env);
+    const domains = [];
+    for (const row of rows) {
+      try {
+        const cfToken = await decryptSecret(env, row.cf_token_enc, row.cf_token_iv);
+        const resendKey = await decryptSecret(env, row.resend_key_enc, row.resend_key_iv);
+        domains.push(domainFromRow(row, cfToken, resendKey));
+      } catch (err) {
+        console.error(`Secretos cifrados inválidos para ${row.zone_name}:`, err.message);
+        await updateDomainStatus(env, row.id, {
+          lastCheckTs: Date.now(),
+          lastError: "Secretos cifrados inválidos (revisá MASTER_KEY)",
+        });
+      }
+    }
+    return domains;
+  }
+
+  /* Modo legacy self-host: la variable DOMAINS + secretos globales. */
   if (!env.DOMAINS) {
     console.error("DOMAINS var not configured");
     return [];
@@ -47,15 +486,17 @@ function getDomains(env) {
     return [];
   }
 
-  return domains.filter(
-    (d) =>
-      d &&
-      typeof d === "object" &&
-      d.zoneId &&
-      d.zoneName &&
-      d.mailTo &&
-      d.mailFrom
-  );
+  return domains
+    .filter(
+      (d) =>
+        d &&
+        typeof d === "object" &&
+        d.zoneId &&
+        d.zoneName &&
+        d.mailTo &&
+        d.mailFrom
+    )
+    .map((d) => ({ ...d, cfToken: env.CF_API_TOKEN, resendKey: env.RESEND_API_KEY }));
 }
 
 function getMailTargets(domains) {
@@ -65,14 +506,14 @@ function getMailTargets(domains) {
     const k = `${d.mailTo}|${d.mailFrom}`;
     if (!seen.has(k)) {
       seen.add(k);
-      targets.push({ to: d.mailTo, from: d.mailFrom });
+      targets.push({ to: d.mailTo, from: d.mailFrom, resendKey: d.resendKey });
     }
   }
   return targets;
 }
 
 async function runCheck(env) {
-  const domains = getDomains(env);
+  const domains = await getDomains(env);
   const targets = getMailTargets(domains);
 
   const heartbeatSection = await checkMissedRuns(env);
@@ -80,6 +521,8 @@ async function runCheck(env) {
 
   for (const domain of domains) {
     const sections = [];
+    const nowMs = Date.now();
+    let error = null;
 
     try {
       const result = await checkDomain(env, domain);
@@ -88,9 +531,14 @@ async function runCheck(env) {
       const recovered = await clearDomainError(env, domain);
       if (recovered) sections.push(recovered);
     } catch (err) {
+      error = err.message || String(err);
       console.error(`Error monitoreando ${domain.zoneName}:`, err);
       const errSection = await recordDomainError(env, domain);
       if (errSection) sections.push(errSection);
+    }
+
+    if (domain.id && env.DB) {
+      await updateDomainStatus(env, domain.id, { lastCheckTs: nowMs, lastError: error });
     }
 
     if (sections.length > 0) {
@@ -98,13 +546,28 @@ async function runCheck(env) {
         sections.length === 1
           ? `🚨 ${sections[0].title} en ${domain.zoneName}`
           : `🚨 Múltiples alertas en ${domain.zoneName}`;
-      await sendEmail(env, {
-        from: domain.mailFrom,
-        to: domain.mailTo,
-        subject,
-        html: buildEmailBody(domain.zoneName, sections),
-        text: buildEmailText(domain.zoneName, sections),
-      });
+
+      if (domain.id && env.DB) {
+        await insertAlert(env, {
+          domainId: domain.id,
+          userId: domain.userId,
+          subject,
+          sections: sections.map((s) => ({ title: s.title, lines: s.lines })),
+        });
+      }
+
+      try {
+        await sendEmail({
+          apiKey: domain.resendKey || env.RESEND_API_KEY,
+          from: domain.mailFrom,
+          to: domain.mailTo,
+          subject,
+          html: buildEmailBody(domain.zoneName, sections),
+          text: buildEmailText(domain.zoneName, sections),
+        });
+      } catch (err) {
+        console.error(`No se pudo enviar el correo para ${domain.zoneName}:`, err);
+      }
     }
   }
 
@@ -112,13 +575,18 @@ async function runCheck(env) {
 
   for (const section of globalSections) {
     for (const t of targets) {
-      await sendEmail(env, {
-        from: t.from,
-        to: t.to,
-        subject: `🚨 ${section.title}`,
-        html: buildEmailBody("Monitor global", [section]),
-        text: buildEmailText("Monitor global", [section]),
-      });
+      try {
+        await sendEmail({
+          apiKey: t.resendKey || env.RESEND_API_KEY,
+          from: t.from,
+          to: t.to,
+          subject: `🚨 ${section.title}`,
+          html: buildEmailBody("Monitor global", [section]),
+          text: buildEmailText("Monitor global", [section]),
+        });
+      } catch (err) {
+        console.error(`No se pudo enviar el correo global a ${t.to}:`, err);
+      }
     }
   }
 }
@@ -130,7 +598,7 @@ async function checkDomain(env, domain) {
   /* ---------- DNS REGISTERS (internos de Cloudflare) ---------- */
 
   const kvKeyDNS = `dns_state_${zoneId}`;
-  const currentRecords = await fetchAllDnsRecords(zoneId, env.CF_API_TOKEN);
+  const currentRecords = await fetchAllDnsRecords(zoneId, domain.cfToken);
   const snapshotDNS = normalizeRecords(currentRecords);
   const previousDNSjson = await env.DNS_MONITOR.get(kvKeyDNS);
   let diffDNS = null;

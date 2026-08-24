@@ -819,3 +819,374 @@ pre .ok {
     gap: 1rem;
   }
 }
+
+/* =====================================================================
+   SaaS: Auth, dashboard, formularios y tablas
+   ===================================================================== */
+
+/* ---- Auth (login / register) ---- */
+.auth-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 5rem 1rem 6rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  border-radius: var(--radius-card);
+  border: 2px solid transparent;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.auth-card.pink {
+  border-color: rgba(254, 152, 204, 0.3);
+}
+.auth-card.blue {
+  border-color: rgba(84, 180, 240, 0.3);
+}
+.auth-card.yellow {
+  border-color: rgba(254, 204, 1, 0.3);
+}
+.auth-card.green {
+  border-color: rgba(49, 208, 91, 0.3);
+}
+.auth-card.purple {
+  border-color: rgba(142, 83, 188, 0.3);
+}
+
+.auth-emoji {
+  font-size: 2.5rem;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+.auth-card h1 {
+  font-family: "Robot Crush", "Work Sans", sans-serif;
+  font-size: 2rem;
+  margin: 0.75rem 0 0.25rem;
+  letter-spacing: 0.03em;
+}
+
+.auth-sub {
+  color: var(--text-gray);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-foot {
+  margin-top: 1.25rem;
+  color: var(--text-gray);
+  font-size: 0.9rem;
+}
+
+.auth-foot .link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-foot .link:hover {
+  text-decoration: underline;
+}
+
+/* ---- Alertas / errores ---- */
+.alert {
+  border-radius: var(--radius-inner);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+.alert.red {
+  background: rgba(239, 68, 68, 0.15);
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  color: #ffb3b3;
+}
+.alert.green {
+  background: rgba(49, 208, 91, 0.12);
+  border: 2px solid rgba(49, 208, 91, 0.4);
+  color: #b6f5c8;
+}
+
+/* ---- Formularios ---- */
+.auth-form {
+  text-align: left;
+}
+
+.field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.field span {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-gray);
+  margin-bottom: 0.35rem;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-inner);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.7rem 0.9rem;
+  transition: var(--transition);
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--pink);
+  outline: none;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn-small {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  border-radius: var(--radius-inner);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.25rem;
+}
+
+.flag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.flag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-gray);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flag input {
+  accent-color: var(--pink);
+  width: 1rem;
+  height: 1rem;
+}
+
+.form-note {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+/* ---- Panel de alta/edición de dominio ---- */
+.domain-form-card {
+  border-radius: var(--radius-card);
+  border: 2px solid rgba(254, 152, 204, 0.3);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  margin-bottom: 2.5rem;
+  overflow: hidden;
+}
+
+.domain-form-card .head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    rgba(254, 152, 204, 0.2),
+    rgba(254, 152, 204, 0.1)
+  );
+}
+
+.domain-form-card .head h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.domain-form-card .auth-form {
+  padding: 1.5rem;
+}
+
+/* ---- Dashboard ---- */
+.dash-wrap {
+  max-width: 1400px;
+  padding-top: 3rem;
+  padding-bottom: 4rem;
+}
+
+.dash-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.dash-title {
+  font-family: "Robot Crush", "Work Sans", sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  letter-spacing: 0.03em;
+}
+
+.dash-sub {
+  color: var(--text-gray);
+  margin-top: 0.25rem;
+  max-width: 640px;
+}
+
+.dash-section {
+  margin-top: 2rem;
+}
+
+.dash-head-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.dash-subtitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.nav-user {
+  color: var(--text-gray);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ---- Cards de dominio ---- */
+.domain-card .body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.domain-row {
+  font-size: 0.9rem;
+  color: var(--text-gray);
+  word-break: break-word;
+}
+
+.domain-error {
+  color: #ffb3b3;
+  font-size: 0.8rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-inner);
+  padding: 0.5rem 0.75rem;
+}
+
+.domain-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.empty-state {
+  color: var(--text-dim);
+  text-align: center;
+  grid-column: 1 / -1;
+  padding: 3rem 1rem;
+  font-size: 1rem;
+}
+
+/* ---- Historial de alertas (tabla) ---- */
+.table-wrap {
+  overflow-x: auto;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--card);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.data-table th {
+  color: var(--text-gray);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--card-hover);
+}
+
+.data-table tbody tr:hover {
+  background: var(--card-hover);
+}
+
+.data-table td {
+  color: var(--text);
+}
+
+.data-table .empty-row {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 2rem;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.pager-info {
+  color: var(--text-gray);
+  font-size: 0.85rem;
+}
+
+.pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .auth-card {
+    padding: 2rem 1.25rem;
+  }
+}

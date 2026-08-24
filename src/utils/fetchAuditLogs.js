@@ -2,7 +2,7 @@ export default async function fetchAuditLogs(env, domain, since) {
   const url = `https://api.cloudflare.com/client/v4/zones/${domain.zoneId}/audit_logs?since=${encodeURIComponent(since)}&direction=desc&per_page=50`;
 
   const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` },
+    headers: { Authorization: `Bearer ${domain.cfToken}` },
   });
 
   if (!res.ok) {

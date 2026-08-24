@@ -1,5 +1,7 @@
-export default async function sendEmail(env, { from, to, subject, text, html }) {
-  const apiKey = env.RESEND_API_KEY;
+export default async function sendEmail({ apiKey, from, to, subject, text, html }) {
+  if (!apiKey) {
+    throw new Error("No hay API key de Resend configurada para este dominio");
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

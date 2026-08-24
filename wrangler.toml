@@ -6,18 +6,25 @@ kv_namespaces = [
   { binding = "DNS_MONITOR", id = "aca58e031e124d9bb4199129a2b38332" }
 ]
 
+[[d1_databases]]
+binding = "DB"
+database_name = "dns-monitor"
+database_id = "7b1a6d94-3b13-480b-97ae-bce56bde0df7"
+migrations_dir = "migrations"
+
 routes = [
   { pattern = "dns.transistemas.org", custom_domain = true }
 ]
 
 [assets]
-directory = "./landing"
+directory = "./public"
 
 [triggers]
 crons = ["*/10 * * * *"]
 
 [vars]
-# Lista de dominios a monitorear (JSON array).
+# Modo self-host (solo se usa si no hay base de datos D1 configurada).
+# En modo SaaS los dominios y secretos se gestionan desde el dashboard (/register).
 # ⚠️ Estos valores son un ejemplo para transistemas.org - cambialos por tu propio dominio y tus correos.
 # Todos los campos excepto zoneId/zoneName/mailTo/mailFrom son opcionales.
 DOMAINS = """[

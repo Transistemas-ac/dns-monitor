@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="DNS Monitor: vigila tus dominios con alertas por email. Cambios DNS, nameservers, vencimiento, DNSSEC, registros de email, CAA, HTTPS/SVCB y más. Cloudflare Worker."
+      content="DNS Monitor: vigila tus dominios con alertas por email. Cambios DNS, nameservers, vencimiento, DNSSEC, registros de email, CAA, HTTPS/SVCB y más. Sin servidores que mantener."
     />
     <meta name="theme-color" content="#1b1b1a" />
     <meta name="author" content="Transistemas" />
@@ -18,7 +18,7 @@
     />
     <meta
       property="og:description"
-      content="Vigil tus dominios las 24/7 y enterate por email si algo cambia: DNS, nameservers, vencimiento, DNSSEC y más."
+      content="Creá tu cuenta, conectá tu Cloudflare y Resend, y vigilá tus dominios las 24/7 por email. Listo en 2 minutos."
     />
     <meta property="og:url" content="https://dns.transistemas.org" />
     <meta
@@ -31,7 +31,7 @@
     <meta name="twitter:title" content="DNS Monitor — Vigila tus dominios" />
     <meta
       name="twitter:description"
-      content="Vigila tus dominios las 24/7 y enterate por email si algo cambia: DNS, nameservers, vencimiento, DNSSEC y más."
+      content="Creá tu cuenta, conectá tu Cloudflare y Resend, y vigilá tus dominios las 24/7 por email. Listo en 2 minutos."
     />
     <meta
       name="twitter:image"
@@ -55,12 +55,12 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
+        "@type": "WebApplication",
         "name": "DNS Monitor",
         "url": "https://dns.transistemas.org",
-        "description": "Monitor de dominios con alertas por email: cambios DNS, nameservers, vencimiento, DNSSEC, registros de email, CAA y salud del monitor. Cloudflare Worker con cron.",
+        "description": "Monitor de dominios SaaS con alertas por email: cambios DNS, nameservers, vencimiento, DNSSEC, registros de email, CAA y salud del monitor. Tu propio panel y tus propios tokens.",
         "applicationCategory": "DeveloperApplication",
-        "operatingSystem": "Cloudflare Workers",
+        "operatingSystem": "Any",
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -88,8 +88,9 @@
       <ul class="nav-links">
         <li><a href="#vigila">Qué vigila</a></li>
         <li><a href="#como-funciona">Cómo funciona</a></li>
-        <li><a href="#setup">Setup</a></li>
-        <li><a class="nav-cta" href="#setup">🚀 Empezar</a></li>
+        <li><a href="#empezar">Empezar</a></li>
+        <li><a href="/login">Ingresar</a></li>
+        <li><a class="nav-cta" href="/register">🚀 Crear cuenta gratis</a></li>
       </ul>
     </nav>
 
@@ -99,17 +100,19 @@
         <h1>DNS Monitor</h1>
         <p class="tagline">
           Vigila tus dominios las 24/7 y enterate por email si algo cambia:
-          registros DNS, nameservers, vencimiento, DNSSEC y más.
+          registros DNS, nameservers, vencimiento, DNSSEC y más. Sin servidores
+          que mantener, sin instalaciones.
         </p>
         <div class="cta-row">
-          <a class="btn pink" href="#setup">🚀 Empezar</a>
+          <a class="btn pink" href="/register">🚀 Crear cuenta gratis</a>
           <a class="btn outline" href="#como-funciona">📖 Ver cómo funciona</a>
         </div>
         <div class="badges">
-          <span class="badge">⏱️ Cron cada 10 min</span>
+          <span class="badge">⚡ Listo en 2 minutos</span>
           <span class="badge">🌈 11 tipos de check</span>
           <span class="badge">📧 Alertas por email</span>
-          <span class="badge">🌍 Multi-dominio</span>
+          <span class="badge">🔐 Tus tokens cifrados</span>
+          <span class="badge">📊 Dashboard e historial</span>
         </div>
       </section>
 
@@ -127,7 +130,7 @@
             </div>
             <div class="body">
               Detecta cualquier registro nuevo, modificado o eliminado en tu
-              zona de Cloudflare, comparando snapshots guardados en KV.
+              zona de Cloudflare, comparando snapshots automáticos.
             </div>
           </article>
 
@@ -194,13 +197,12 @@
 
           <article class="feature-card blue">
             <div class="head">
-              <span class="emoji">💓</span>
-              <h3>Salud del monitor</h3>
+              <span class="emoji">📊</span>
+              <h3>Dashboard e historial</h3>
             </div>
             <div class="body">
-              Heartbeat que detecta corridas perdidas del cron y errores
-              recurrentes por dominio, más ping opcional a Healthchecks para
-              cubrir la muerte total.
+              Estado en vivo de cada dominio y un historial completo de
+              alertas. Mirá qué pasó, cuándo, y en qué dominio.
             </div>
           </article>
 
@@ -223,8 +225,8 @@
             </div>
             <div class="body">
               Detecta cambios en los registros CAA (quién puede emitir
-              certificados para tu dominio). Opcional: aviso único si no hay CAA
-              con <code>expectCAA: true</code>.
+              certificados para tu dominio). Opcional: aviso único si no hay
+              CAA.
             </div>
           </article>
 
@@ -258,9 +260,8 @@
               <h3>Web check (opcional)</h3>
             </div>
             <div class="body">
-              Con <code>expectWeb: true</code>, verifica que tu sitio responda
-              por HTTPS (timeout 15 s) y avisa si se cae o cambia su estado
-              HTTP. Sin API keys, solo un fetch por corrida.
+              Con una casilla en el dashboard, verifica que tu sitio responda
+              por HTTPS y avisa si se cae o cambia su estado HTTP.
             </div>
           </article>
         </div>
@@ -271,58 +272,58 @@
       <section id="como-funciona" style="scroll-margin-top: 100px">
         <h2 class="section-title">Cómo funciona 🧠</h2>
         <p class="section-sub">
-          Un Cloudflare Worker con cron que corre solo, se guarda sus propias
-          comparaciones y solo te molesta cuando hay novedades.
+          Te registrás, conectás tus cuentas y el monitor se encarga. Vos solo
+          recibís el correo cuando hay novedades.
         </p>
 
         <div class="steps">
           <div class="step-card pink">
-            <span class="step-emoji">⏰</span>
-            <h3>Se despierta cada 10 minutos</h3>
+            <span class="step-emoji">📝</span>
+            <h3>Creá tu cuenta</h3>
             <p>
-              El cron dispara la corrida completa en background. Sin servidores
-              que mantener, sin costos fijos.
+              Email y contraseña, listo en un minuto. Sin tarjeta, sin
+              instalaciones, sin servidores que mantener.
             </p>
           </div>
           <div class="step-card blue">
-            <span class="step-emoji">📸</span>
-            <h3>Compara snapshots en KV</h3>
+            <span class="step-emoji">🔑</span>
+            <h3>Conectá tus cuentas</h3>
             <p>
-              Obtiene los registros DNS internos y los nameservers reales, y los
-              compara con el estado anterior guardado. Diff determinista y
-              ordenado.
+              Pegá tu token de Cloudflare y tu API key de Resend. Se cifran con
+              AES-256 y nadie más los ve. Los usás vos, para tus zonas.
             </p>
           </div>
           <div class="step-card yellow">
-            <span class="step-emoji">🕵️</span>
-            <h3>Rastrea a la persona responsable</h3>
+            <span class="step-emoji">🌍</span>
+            <h3>Agregá tus dominios</h3>
             <p>
-              Si hubo cambios DNS, consulta los Audit Logs de la zona desde el
-              último cursor y adjunta quién lo hizo, cuándo y qué acción.
+              Zone ID, dominio y destinatario. Validamos tu acceso a la zona al
+              toque. 3 dominios gratis, sin límite de alertas.
             </p>
           </div>
           <div class="step-card green">
-            <span class="step-emoji">📅</span>
-            <h3>Checks diarios con frescura</h3>
+            <span class="step-emoji">🕵️</span>
+            <h3>Se vigila solo, cada 10 minutos</h3>
             <p>
-              Vencimiento, registros de email y DNSSEC corren una vez por día,
-              controlados por timestamps en KV.
+              Compara tus registros DNS, nameservers y checks diarios
+              (vencimiento, email, DNSSEC). Si algo cambia, rastrea quién lo
+              hizo.
             </p>
           </div>
           <div class="step-card pink">
             <span class="step-emoji">📧</span>
             <h3>Email combinado, solo si hay novedades</h3>
             <p>
-              Un solo correo con todas las secciones afectadas del dominio,
-              enviado con Resend al destinatario configurado.
+              Un solo correo con todas las secciones afectadas del dominio.
+              También queda registrado en tu historial del dashboard.
             </p>
           </div>
           <div class="step-card blue">
             <span class="step-emoji">💓</span>
             <h3>Y se vigila a sí mismo</h3>
             <p>
-              Heartbeat interno para corridas perdidas, contador de errores por
-              dominio con aviso de recuperación, y ping opcional a Healthchecks.
+              Heartbeat que detecta corridas perdidas y errores recurrentes por
+              dominio, con aviso de recuperación. Tu monitor no se duerme.
             </p>
           </div>
         </div>
@@ -330,25 +331,31 @@
 
       <br /><br />
 
-      <section id="setup" style="scroll-margin-top: 100px">
-        <h2 class="section-title">Setup en minutos ⚙️</h2>
+      <section id="empezar" style="scroll-margin-top: 100px">
+        <h2 class="section-title">Empezar en minutos ⚙️</h2>
         <p class="section-sub">
-          Instalación con Wrangler, secretos por comando y listo. Tres pasos y
-          tu monitor ya está cuidando tus dominios.
+          Solo necesitás las cuentas que ya tenés. Sin código, sin terminal.
         </p>
 
         <div class="setup-grid">
           <div class="reqs-card">
             <div class="head">
               <span class="emoji">🧰</span>
-              <h3>Requisitos</h3>
+              <h3>Lo que necesitás</h3>
             </div>
             <div class="body">
               <div class="req-item">
                 <span class="emoji">☁️</span
                 ><span
-                  ><strong>Cloudflare Workers</strong> habilitado y acceso a los
-                  dominios a monitorear.</span
+                  >Dominio en
+                  <a
+                    class="link"
+                    href="https://dash.cloudflare.com"
+                    target="_blank"
+                    rel="noopener"
+                    ><strong>Cloudflare</strong></a
+                  >
+                  y un token API con permisos de solo lectura.</span
                 >
               </div>
               <div class="req-item">
@@ -362,15 +369,14 @@
                     rel="noopener"
                     ><strong>Resend</strong></a
                   >
-                  con el remitente <code>mailFrom</code> verificado.</span
+                  con el remitente verificado, para tus alertas.</span
                 >
               </div>
               <div class="req-item">
-                <span class="emoji">🔑</span
+                <span class="emoji">📧</span
                 ><span
-                  >Token de Cloudflare con permisos <strong>Zone → DNS</strong>,
-                  <strong>Zone</strong> y <strong>Logs</strong> (todos en
-                  Read).</span
+                  >El correo donde querés recibir las alertas (puede ser
+                  cualquiera).</span
                 >
               </div>
             </div>
@@ -378,100 +384,116 @@
 
           <div class="code-card">
             <div class="head">
-              <span class="emoji">🛠️</span>
-              <h3>Instalación</h3>
+              <span class="emoji">🔑</span>
+              <h3>Creá tus tokens (2 minutos)</h3>
             </div>
             <div class="body">
-              <pre><span class="cmt"># 1. Clona el repo</span>
-<span class="cmd">git clone https://github.com/Transistemas-ac/dns-monitor</span>
-<span class="cmd">cd dns-monitor</span>
-
-<span class="cmt"># 2. Instala dependencias</span>
-<span class="cmd">npm install</span>
-
-<span class="cmt"># 3. Namespace de KV</span>
-<span class="cmd">npx wrangler kv namespace create DNS_MONITOR</span>
-
-<span class="cmt"># 4. Secretos (Cloudflare y Resend)</span>
-<span class="cmd">npx wrangler secret put CF_API_TOKEN</span>
-<span class="cmd">npx wrangler secret put RESEND_API_KEY</span>
-
-<span class="cmt"># 5. Deploy 🚀</span>
-<span class="cmd">npx wrangler deploy</span>
-
-<span class="ok">✔ Monitor corriendo</span></pre>
-
-              <p class="code-note">
-                Pegá el <code>id</code> del KV y cargá la lista de dominios a
-                monitorear en <code>wrangler.toml</code>:
-              </p>
-              <pre><span class="cmd">kv_namespaces</span> = [
-  { <span class="cmd">binding</span> = <span class="cmd">"DNS_MONITOR"</span>, <span class="cmd">id</span> = <span class="cmd">"&lt;id del namespace&gt;"</span> }
-]
-
-<span class="cmd">routes</span> = [
-  { <span class="cmd">pattern</span> = <span class="cmd">"dns.transistemas.org"</span>, <span class="cmd">custom_domain</span> = <span class="cmd">true</span> }
-]
-
-<span class="cmd">[vars]</span>
-<span class="cmt"># Lista de dominios a monitorear (recuerda eliminar el default)</span>
-<span class="cmd">DOMAINS</span> = <span class="cmd">"""</span>[
-  {
-    <span class="cmd">"zoneId"</span>: <span class="cmd">"&lt;ZONE_ID&gt;"</span>,
-    <span class="cmd">"zoneName"</span>: <span class="cmd">"example.com"</span>,
-    <span class="cmd">"mailTo"</span>: <span class="cmd">"admin@example.com"</span>,
-    <span class="cmd">"mailFrom"</span>: <span class="cmd">"dns@example.com"</span>
-  }
-]<span class="cmd">"""</span></pre>
+              <div class="req-item">
+                <span class="emoji">1️⃣</span
+                ><span
+                  >En
+                  <a
+                    class="link"
+                    href="https://dash.cloudflare.com/profile/api-tokens"
+                    target="_blank"
+                    rel="noopener"
+                    ><strong>API Tokens de Cloudflare</strong></a
+                  >
+                  → Create Token. Permisos: <strong>Zone → DNS → Read</strong>,
+                  <strong>Zone → Zone → Read</strong> y, opcionalmente,
+                  <strong>Zone → Logs → Read</strong>.</span
+                >
+              </div>
+              <div class="req-item">
+                <span class="emoji">2️⃣</span
+                ><span
+                  >En <a class="link" href="https://resend.com/api-keys" target="_blank" rel="noopener"><strong>API Keys de Resend</strong></a>
+                  → Create API Key. Guardá la key que aparece una sola vez.</span
+                >
+              </div>
+              <div class="req-item">
+                <span class="emoji">3️⃣</span
+                ><span
+                  >Verificá tu remitente en
+                  <a
+                    class="link"
+                    href="https://resend.com/domains"
+                    target="_blank"
+                    rel="noopener"
+                    ><strong>Resend → Domains</strong></a
+                  >
+                  (el <code>mailFrom</code> de tus alertas).</span
+                >
+              </div>
+              <div class="req-item">
+                <span class="emoji">4️⃣</span
+                ><span
+                  >En el dashboard pegá los tokens junto a tu dominio y
+                  listo. <strong>Validamos tu acceso al instante.</strong></span
+                >
+              </div>
+              <pre><span class="cmd">1.</span> <span class="ok">Creá tu cuenta</span> en dns.transistemas.org
+<span class="cmd">2.</span> <span class="ok">Pegá tus tokens</span> en el dashboard
+<span class="cmd">3.</span> <span class="ok">Agregá tu dominio</span> y dormí tranquilo ✔</pre>
             </div>
           </div>
 
           <div class="watchdog-card">
             <div class="head">
               <span class="emoji">🛡️</span>
-              <h3>Watchdog externo (opcional)</h3>
-              <span class="badge yellow">Healthchecks.io</span>
+              <h3>Tus datos están seguros</h3>
+              <span class="badge yellow">AES-256</span>
             </div>
             <div class="body">
               <div class="req-item">
-                <span class="emoji">1️⃣</span
+                <span class="emoji">🔐</span
                 ><span
-                  >Cuenta gratis en
-                  <a
-                    class="link"
-                    href="https://healthchecks.io"
-                    target="_blank"
-                    rel="noopener"
-                    ><strong>healthchecks.io</strong></a
-                  >
-                  → My Checks → Add Check.</span
+                  >Tus tokens se cifran con <strong>AES-256-GCM</strong> antes
+                  de guardarse. Nunca se muestran de nuevo, ni siquiera a vos:
+                  solo se rotan.</span
                 >
               </div>
               <div class="req-item">
-                <span class="emoji">2️⃣</span
+                <span class="emoji">🛂</span
                 ><span
-                  >Elegí <strong>"Ping-only"</strong> con Period
-                  <strong>10 min</strong> y Grace <strong>1 día</strong>.</span
+                  >Tu token solo puede leer <strong>tus propias zonas</strong>.
+                  Es Cloudflare quien valida los permisos: tu cuenta no puede
+                  tocar las de nadie más.</span
                 >
               </div>
               <div class="req-item">
-                <span class="emoji">3️⃣</span
+                <span class="emoji">📭</span
                 ><span
-                  >Copiá la URL de ping (ej.
-                  <code>https://hc-ping.com/&lt;uuid&gt;</code>) y configurala
-                  como secreto:</span
+                  >Los correos salen con <strong>tu propia key de Resend</strong
+                  >. Nunca usamos tus credenciales para otra cosa que
+                  monitorear tus dominios.</span
                 >
               </div>
-              <pre><span class="cmd">npx wrangler secret put HEALTHCHECKS_URL</span></pre>
               <div class="req-item">
-                <span
-                  >El Worker hace ping al final de cada corrida exitosa. Si el
-                  cron muere del todo, <strong>Healthchecks te alerta</strong> —
-                  cubre lo que el heartbeat interno no puede detectar.</span
+                <span class="emoji">⚡</span
+                ><span
+                  >Infraestructura en <strong>Cloudflare Workers</strong>: sin
+                  servidores, sin base de datos que mantener, sin
+                  vulnerabilidades de hosting.</span
                 >
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="hero" style="padding-top: 3rem">
+        <span class="hero-emoji">🛰️</span>
+        <h2 style="font-family: 'Robot Crush', 'Work Sans', sans-serif">
+          ¿Listo para no sorprenderte más?
+        </h2>
+        <p class="tagline" style="margin: 1rem auto 2rem">
+          Creá tu cuenta gratis, conectá tus cuentas y vigilá tus primeros 3
+          dominios. Cuando algo cambie, te enterás vos primero.
+        </p>
+        <div class="cta-row">
+          <a class="btn pink" href="/register">🚀 Crear cuenta gratis</a>
+          <a class="btn outline" href="/login">Ya tengo cuenta</a>
         </div>
       </section>
     </main>
