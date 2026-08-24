@@ -35,6 +35,17 @@ function shell({ title, user, content }) {
   </nav>
   <main class="container auth-wrap">
     ${content}
+    <script>
+      document.querySelectorAll(".pass-toggle").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const input = btn.closest(".pass-field").querySelector("input");
+          const show = input.type === "password";
+          input.type = show ? "text" : "password";
+          btn.textContent = show ? "🙈" : "👁️";
+          btn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+        });
+      });
+    </script>
   </main>
 </body>
 </html>`;
@@ -78,7 +89,10 @@ export function renderRegisterPage({ error, email }) {
           </label>
           <label class="field">
             <span>Contraseña</span>
-            <input type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+            <div class="pass-field">
+              <input type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <button type="submit" class="btn pink btn-block">Crear cuenta</button>
         </form>
@@ -116,7 +130,10 @@ export function renderLoginPage({ error, email, unverified }) {
           </label>
           <label class="field">
             <span>Contraseña</span>
-            <input type="password" name="password" required autocomplete="current-password" placeholder="Tu contraseña" />
+            <div class="pass-field">
+              <input type="password" name="password" required autocomplete="current-password" placeholder="Tu contraseña" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <button type="submit" class="btn blue btn-block">Ingresar</button>
         </form>
@@ -225,11 +242,17 @@ export function renderResetPage({ error, token }) {
           <input type="hidden" name="token" value="${esc(token)}" />
           <label class="field">
             <span>Contraseña nueva</span>
-            <input type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+            <div class="pass-field">
+              <input type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <label class="field">
             <span>Repetí la contraseña</span>
-            <input type="password" name="password2" required minlength="8" autocomplete="new-password" placeholder="Repetí la contraseña" />
+            <div class="pass-field">
+              <input type="password" name="password2" required minlength="8" autocomplete="new-password" placeholder="Repetí la contraseña" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <button type="submit" class="btn purple btn-block">Cambiar contraseña</button>
         </form>

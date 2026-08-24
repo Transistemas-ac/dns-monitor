@@ -67,11 +67,17 @@ export function renderDashboardPage({ user }) {
           </label>
           <label class="field">
             <span>Token de Cloudflare</span>
-            <input type="password" name="cfToken" id="cfToken" autocomplete="new-password" placeholder="Pegá tu token (solo lectura)" />
+            <div class="pass-field">
+              <input type="password" name="cfToken" id="cfToken" autocomplete="new-password" placeholder="Pegá tu token (solo lectura)" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <label class="field">
             <span>API key de Resend</span>
-            <input type="password" name="resendKey" id="resendKey" autocomplete="new-password" placeholder="Pegá tu key" />
+            <div class="pass-field">
+              <input type="password" name="resendKey" id="resendKey" autocomplete="new-password" placeholder="Pegá tu key" />
+              <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+            </div>
           </label>
           <label class="field">
             <span>Días de alerta de vencimiento</span>
@@ -366,6 +372,16 @@ export function renderDashboardPage({ user }) {
 
       document.getElementById("btn-new").addEventListener("click", () => openForm(null));
       document.getElementById("btn-cancel").addEventListener("click", resetForm);
+
+      document.querySelectorAll(".pass-toggle").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = btn.closest(".pass-field").querySelector("input");
+          const show = input.type === "password";
+          input.type = show ? "text" : "password";
+          btn.textContent = show ? "🙈" : "👁️";
+          btn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+        });
+      });
 
       (function () {
         const el = document.querySelector(".wordmark");
