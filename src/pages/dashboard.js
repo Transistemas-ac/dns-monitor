@@ -4,6 +4,7 @@ import { appShell, esc } from "./shell.js";
 
 export function renderDashboardPage({ user }) {
   const content = `
+    <div class="dash-top">
     <header class="dash-head">
       <div>
         <h1 class="dash-title">Tu monitor 🛰️</h1>
@@ -26,6 +27,7 @@ export function renderDashboardPage({ user }) {
         <button type="submit" class="btn pink">Agregar</button>
       </form>
     </section>
+    </div>
 
     <section class="dash-section">
       <div class="dash-head-inline">

@@ -1174,6 +1174,12 @@ pre .ok {
   padding-bottom: 4rem;
 }
 
+.dash-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .dash-head {
   display: flex;
   align-items: flex-end;
@@ -1181,6 +1187,18 @@ pre .ok {
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1.75rem;
+  max-width: calc(50% - 0.75rem);
+  width: 100%;
+}
+
+.dash-top > .domain-form-inline {
+  max-width: calc(50% - 0.75rem);
+  width: 100%;
+}
+
+.dash-top > .alert {
+  max-width: calc(50% - 0.75rem);
+  width: 100%;
 }
 
 .dash-title {
@@ -1449,6 +1467,11 @@ pre .ok {
   }
 
   /* Dashboard: el formulario de agregar dominio se apila */
+  .dash-head,
+  .dash-top > .domain-form-inline,
+  .dash-top > .alert {
+    max-width: none;
+  }
   .domain-form-inline {
     max-width: none;
   }
