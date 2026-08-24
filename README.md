@@ -45,7 +45,7 @@ Construido en Cloudflare Workers con scheduled cron checks, KV storage y DNS-ove
 - 🧑‍💻 **Registro y login** con verificación por email (welcome email + link de confirmación), recuperación de contraseña y cambio de contraseña desde el dashboard
 - 🌍 **Dashboard por usuario**: dominios con estado en vivo (última corrida, errores), alta/edición/eliminación con validación real del token contra la API de Cloudflare, y emoji personalizable por dominio (picker optimista, sin refresh)
 - 📊 **Historial de alertas** por dominio con paginación
-- 🔔 **Canales de alerta globales**: email (destino configurable), **Telegram** (bot + chat id), **Discord** (webhook) y **Webhook genérico** (POST JSON + firma HMAC opcional) — todos con botón "Probar"
+- 🔔 **Canales de alerta globales**: email (enviado desde `dns@transistemas.org`), **Telegram** (bot + chat id), **Discord** (webhook) y **Webhook genérico** (POST JSON + firma HMAC opcional) — todos con botón "Probar"
 - 🔐 Los tokens de cada usuario se cifran con **AES-256-GCM** (`MASTER_KEY` del operador) y nunca se muestran de nuevo
 
 **Motor de monitoreo** (un Cloudflare Worker con cron `*/10 * * * *`):
@@ -56,12 +56,12 @@ Construido en Cloudflare Workers con scheduled cron checks, KV storage y DNS-ove
 - vencimiento del dominio (RDAP, gratis, sin API key), incluyendo **cambios de registrador** y **estados críticos** (`pendingDelete`, `redemptionPeriod`, `clientHold`)
 - registros de email: **MX, SPF, DMARC, DKIM** (DoH), más el **límite de DNS lookups del SPF** (RFC 7208) y las **direcciones rua/ruf** del DMARC
 - estado **DNSSEC** (Cloudflare + registros DS públicos)
-- registros **CAA** (opcional) y **HTTPS (SVCB)** en el apex
+- registros **CAA** y **HTTPS (SVCB)** en el apex
 - **consistencia de nameservers** entre 1.1.1.1 y 8.8.8.8 (posible secuestro/fragmentación)
-- **web check** (opcional): ¿el sitio responde por HTTPS?
+- **web check**: ¿el sitio responde por HTTPS?
 - salud del propio monitor: corridas perdidas y errores recurrentes (heartbeat)
 
-Cada alerta se envía por los canales configurados (email + Telegram/Discord/webhook) y queda registrada en el historial.
+Todas las alertas (MX, SPF, DMARC, DKIM, CAA, Web check, vencimiento) están activas por defecto. Los días de alerta de vencimiento son fijos: 60, 30, 14, 7 y 1 día. No hay límite de dominios.
 
 <br>
 
@@ -69,9 +69,8 @@ Cada alerta se envía por los canales configurados (email + Telegram/Discord/web
 
 1. **Te registrás** — email + contraseña, confirmás tu email.
 2. **Conectás tu Cloudflare** — pegás tu token de solo lectura; se cifra y se valida al instante.
-3. **Agregás tus dominios** — zone ID y dominio; 3 dominios gratis por cuenta.
-4. **Configurás tus alertas** — elegís el email destino y tus canales (email, Telegram, Discord o webhook, con botón "Probar").
-5. El cron corre **cada 10 minutos**: compara snapshots en KV, corre los checks diarios (vencimiento, email, DNSSEC) y, si hay novedades, las despacha a tus canales y las guarda en el historial.
+3. **Agregás tus dominios** — solo el nombre del dominio; validamos tu acceso a la zona al toque. Sin límite de dominios.
+4. El cron corre **cada 10 minutos**: compara snapshots en KV, corre los checks diarios (vencimiento, email, DNSSEC) y, si hay novedades, las despacha a tus canales y las guarda en el historial.
 
 <br>
 
@@ -116,10 +115,12 @@ Cada alerta se envía por los canales configurados (email + Telegram/Discord/web
 
 1. Andá a **Crear cuenta gratis** → confirmá tu email.
 2. En el dashboard: **Agregar dominio** con:
-   - **Zone ID** de Cloudflare (Overview → sección API) — lo validamos contra la API al instante
-   - Tu **token de Cloudflare** con permiso `Zone → DNS → Read` (opcionales: `Zone → Zone → Read`, `Zone → Logs → Read`)
+   - Tu **dominio** (ej. `example.com`)
+   - Tu **token de Cloudflare** con permisos `Zone → DNS → Read` y `Zone → Zone → Read` — lo validamos contra la API al instante
 3. En **Alertas** (navbar): elegí el **email destino** (todas las alertas de tus dominios llegan ahí, enviadas desde `dns@transistemas.org`), y configurá **Telegram** (creá un bot con @BotFather), **Discord** (webhook del canal) o un **Webhook** propio. Usá "Probar" para validar cada uno.
 4. El emoji de cada dominio se puede cambiar desde su card (pickercito de emojis, guardado al instante).
+
+> Todas las alertas (MX, SPF, DMARC, DKIM, CAA, Web check, vencimiento) están activas por defecto. Los días de alerta de vencimiento son fijos: 60, 30, 14, 7 y 1 día. No hay límite de dominios.
 
 > Los correos de sistema (bienvenida, confirmación, recuperación) los envía la instancia con `RESEND_API_KEY` del operador.
 
@@ -128,6 +129,8 @@ Cada alerta se envía por los canales configurados (email + Telegram/Discord/web
 ## 🔧 Para operadores (deploy)
 
 Requisitos: `npm install`, cuenta de Cloudflare con Workers + D1.
+
+**Permisos del token de Cloudflare**: `Zone → DNS → Read` (obligatorio) y `Zone → Zone → Read` (para buscar el Zone ID por nombre de dominio).
 
 ```bash
 # 1. Base de datos
@@ -139,7 +142,7 @@ npx wrangler kv namespace create DNS_MONITOR   # copiar el id en wrangler.toml
 
 # 3. Secretos
 npx wrangler secret put MASTER_KEY          # base64 de 32 bytes: openssl rand -base64 32
-npx wrangler secret put RESEND_API_KEY      # emails de sistema (bienvenida, verify, reset)
+npx wrangler secret put RESEND_API_KEY      # emails de sistema y alertas por email
 
 # 4. Variables (wrangler.toml)
 #    SYSTEM_MAIL_FROM = "DNS Monitor <no-reply@tudominio.com>"  # remitente verificado en Resend

@@ -24,6 +24,7 @@ export function appShell({ user, active = "", content, script, title }) {
   <nav class="navbar">
     <a class="wordmark" href="/" title="DNS Monitor">DNS MONITOR</a>
     <ul class="nav-links">
+      <li><a href="/app" class="${active === "dashboard" ? "nav-active" : ""}">Monitor</a></li>
       <li><a href="/app/alertas" class="${active === "alertas" ? "nav-active" : ""}">Alertas</a></li>
       <li>
         <div class="nav-user-wrap">

@@ -69,9 +69,8 @@ Every alert is delivered to your configured channels (email + Telegram/Discord/w
 
 1. **You sign up** — email + password, then confirm your email.
 2. **You connect your Cloudflare** — paste your read-only token; it is encrypted and validated instantly.
-3. **You add your domains** — zone ID and domain; 3 free domains per account.
-4. **You configure your alerts** — pick the destination email and your channels (email, Telegram, Discord, or webhook, with a "Test" button).
-5. The cron runs **every 10 minutes**: it compares snapshots in KV, runs the daily checks (expiry, email, DNSSEC) and, if there's anything new, dispatches it to your channels and stores it in the history.
+3. **You add your domains** — just the domain name; we validate your access to the zone instantly. No domain limit.
+4. The cron runs **every 10 minutes**: it compares snapshots in KV, runs the daily checks (expiry, email, DNSSEC) and, if there's anything new, dispatches it to your channels and stores it in the history.
 
 <br>
 
@@ -116,10 +115,12 @@ Every alert is delivered to your configured channels (email + Telegram/Discord/w
 
 1. Go to **Create free account** → confirm your email.
 2. In the dashboard: **Add domain** with:
-   - Your **Zone ID** from Cloudflare (Overview → API section) — validated against the API instantly
-   - Your **Cloudflare token** with `Zone → DNS → Read` (optional: `Zone → Zone → Read`, `Zone → Logs → Read`)
+   - Your **domain** (e.g. `example.com`)
+   - Your **Cloudflare token** with permissions `Zone → DNS → Read` and `Zone → Zone → Read` — validated against the API instantly
 3. In **Alerts** (navbar): pick the **destination email** (all alerts from your domains arrive there, sent from `dns@transistemas.org`), and configure **Telegram** (create a bot with @BotFather), **Discord** (channel webhook), or your own **Webhook**. Use "Test" to validate each one.
 4. Each domain's emoji can be changed from its card (emoji picker, saved instantly).
+
+> All alerts (MX, SPF, DMARC, DKIM, CAA, Web check, expiry) are active by default. Expiry alert days are fixed: 60, 30, 14, 7, and 1 day. No domain limit.
 
 > System emails (welcome, confirmation, recovery) are sent by the instance using the operator's `RESEND_API_KEY`.
 
@@ -128,6 +129,8 @@ Every alert is delivered to your configured channels (email + Telegram/Discord/w
 ## 🔧 For operators (deploy)
 
 Requirements: `npm install`, a Cloudflare account with Workers + D1.
+
+**Required Cloudflare token permissions**: `Zone → DNS → Read` (required) and `Zone → Zone → Read` (to look up the Zone ID by domain name).
 
 ```bash
 # 1. Database
@@ -139,7 +142,7 @@ npx wrangler kv namespace create DNS_MONITOR   # copy the id into wrangler.toml
 
 # 3. Secrets
 npx wrangler secret put MASTER_KEY          # base64 of 32 bytes: openssl rand -base64 32
-npx wrangler secret put RESEND_API_KEY      # system emails (welcome, verify, reset)
+npx wrangler secret put RESEND_API_KEY      # system emails (welcome, verify, reset) and all alert emails
 
 # 4. Variables (wrangler.toml)
 #    SYSTEM_MAIL_FROM = "DNS Monitor <no-reply@yourdomain.com>"  # sender verified in Resend

@@ -53,52 +53,42 @@ async function cfErrorDetail(res) {
   }
 }
 
-async function validateCfToken({ zoneId, zoneName, cfToken }) {
+async function lookupZoneId(zoneName, cfToken) {
   const headers = { Authorization: `Bearer ${cfToken}` };
-
-  /* 1) GET /zones/{id} valida acceso + nombre de zona, pero exige Zone → Zone → Read. */
-  const zoneRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}`, {
-    headers,
-  });
-  if (zoneRes.ok) {
-    const data = await zoneRes.json();
-    const zoneNameFromApi = data.result?.name;
-    if (zoneNameFromApi) {
-      if (zoneNameFromApi.toLowerCase() !== zoneName.trim().toLowerCase()) {
-        throw new Error(`El zoneId corresponde a "${zoneNameFromApi}", no a "${zoneName}".`);
-      }
-      return;
-    }
-  }
-
-  /* 2) Fallback: el endpoint que usa el monitor (Zone → DNS → Read).
-     Si responde OK, el monitoreo puede operar aunque falte Zone → Zone → Read. */
-  const dnsRes = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?per_page=1`,
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(zoneName.trim())}&per_page=1`,
     { headers }
   );
-  if (dnsRes.ok) return;
+  if (!res.ok) {
+    const errors = await cfErrorDetail(res);
+    const codes = new Set((await Promise.all([cfErrorDetail(res)])).flat().map((e) => e.code));
+    if (res.status === 401) throw new Error("El token de Cloudflare es inválido (401).");
+    if (res.status === 403) throw new Error("El token no tiene permiso Zone → Zone → Read para buscar la zona.");
+    throw new Error("No se pudo buscar la zona en Cloudflare.");
+  }
+  const data = await res.json();
+  const zone = data.result?.[0];
+  if (!zone) {
+    throw new Error(`No se encontró la zona "${zoneName}" en tu cuenta de Cloudflare.`);
+  }
+  return zone.id;
+}
 
-  /* 3) Diagnóstico con los códigos de error de Cloudflare. */
-  const [zoneErrors, dnsErrors] = await Promise.all([cfErrorDetail(zoneRes), cfErrorDetail(dnsRes)]);
-  const errors = [...zoneErrors, ...dnsErrors];
-  const codes = new Set(errors.map((e) => e.code));
-  const messages = errors.map((e) => e.message).filter(Boolean);
-
-  if (codes.has(9109)) {
-    throw new Error(
-      "Ese zoneId no corresponde a ninguna zona de tu cuenta de Cloudflare. Copialo desde Cloudflare → Overview → API → Zone ID (o revisá que la zona esté incluida en el alcance del token)."
-    );
-  }
-  if (codes.has(10000) || messages.some((m) => /auth/i.test(m))) {
-    throw new Error("El token de Cloudflare es inválido o no incluye esa zona en su alcance.");
-  }
-  if (zoneRes.status === 401 || dnsRes.status === 401) {
-    throw new Error("El token de Cloudflare es inválido (401).");
-  }
-  throw new Error(
-    "El token no tiene acceso a esa zona. Verificá que el token tenga el permiso Zone → DNS → Read y que la zona esté incluida en su alcance."
+async function validateCfToken(zoneName, cfToken) {
+  const zoneId = await lookupZoneId(zoneName, cfToken);
+  
+  /* Validar que el token tiene acceso a los DNS records de esa zona (Zone → DNS → Read) */
+  const headers = { Authorization: `Bearer ${cfToken}` };
+  const dnsRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?per_page=1`,
+    { headers: { Authorization: `Bearer ${cfToken}` } }
   );
+  if (!dnsRes.ok) {
+    const errors = await cfErrorDetail(dnsRes);
+    if (dnsRes.status === 403) throw new Error("El token no tiene permiso Zone → DNS → Read para leer los registros.");
+    throw new Error("El token no tiene acceso a los DNS de la zona (requiere Zone → DNS → Read).");
+  }
+  return zoneId;
 }
 
 function validateCommon(body) {
@@ -109,29 +99,13 @@ function validateCommon(body) {
 }
 
 function flagsFromBody(body, existing) {
-  const parseDays = () => {
-    if (Array.isArray(body.expiryAlertDays)) {
-      return body.expiryAlertDays.map(Number).filter((n) => Number.isFinite(n));
-    }
-    if (existing?.expiry_alert_days) {
-      try {
-        return JSON.parse(existing.expiry_alert_days);
-      } catch {
-        return [60, 30, 14, 7, 1];
-      }
-    }
-    return [60, 30, 14, 7, 1];
-  };
-  const bool = (key, fallback) =>
-    body[key] !== undefined ? !!body[key] : fallback;
   return {
-    expiryAlertDays: parseDays(),
-    expectMX: bool("expectMX", existing ? existing.expect_mx === 1 : true),
-    expectSPF: bool("expectSPF", existing ? existing.expect_spf === 1 : true),
-    expectDMARC: bool("expectDMARC", existing ? existing.expect_dmarc === 1 : true),
-    expectDKIM: bool("expectDKIM", existing ? existing.expect_dkim === 1 : true),
-    expectCAA: bool("expectCAA", existing ? existing.expect_caa === 1 : false),
-    expectWeb: bool("expectWeb", existing ? existing.expect_web === 1 : false),
+    expectMX: true,
+    expectSPF: true,
+    expectDMARC: true,
+    expectDKIM: true,
+    expectCAA: true,
+    expectWeb: true,
   };
 }
 
@@ -155,11 +129,7 @@ export async function handleApiDomains(env, request, user) {
       }
       if (!body.cfToken) return jsonError(400, "El token de Cloudflare es obligatorio.");
 
-      await validateCfToken({
-        zoneId: body.zoneId,
-        zoneName: body.zoneName,
-        cfToken: body.cfToken,
-      });
+      const zoneId = await validateCfToken(body.zoneName.trim(), body.cfToken);
 
       const cf = await encryptSecret(env, body.cfToken);
       const flags = flagsFromBody(body);
@@ -167,7 +137,7 @@ export async function handleApiDomains(env, request, user) {
       const id = await createDomain(env, {
         userId: user.id,
         domain: {
-          zoneId: body.zoneId.trim(),
+          zoneId,
           zoneName: body.zoneName.trim(),
           emoji: body.emoji || "🌍",
           ...flags,
@@ -211,11 +181,7 @@ export async function handleApiDomainItem(env, request, user, id) {
       let cfTokenEnc = existing.cf_token_enc;
       let cfTokenIv = existing.cf_token_iv;
       if (body.cfToken) {
-        await validateCfToken({
-          zoneId: existing.zone_id,
-          zoneName: existing.zone_name,
-          cfToken: body.cfToken,
-        });
+        await validateCfToken(existing.zone_name, body.cfToken);
         const cf = await encryptSecret(env, body.cfToken);
         cfTokenEnc = cf.enc;
         cfTokenIv = cf.iv;

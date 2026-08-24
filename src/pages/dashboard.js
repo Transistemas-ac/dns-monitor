@@ -6,7 +6,7 @@ export function renderDashboardPage({ user }) {
   const content = `
     <header class="dash-head">
       <div>
-        <h1 class="dash-title">Tu dashboard 🛰️</h1>
+        <h1 class="dash-title">Tu monitor 🛰️</h1>
         <p class="dash-sub">Estado de tus dominios e historial de alertas. El monitor corre cada 10 minutos.</p>
       </div>
       <button type="button" class="btn pink" id="btn-new">＋ Agregar dominio</button>
@@ -24,12 +24,7 @@ export function renderDashboardPage({ user }) {
         <input type="hidden" name="id" />
         <div class="form-grid">
           <label class="field">
-            <span>Zone ID (Cloudflare)</span>
-            <input type="text" name="zoneId" required pattern="[0-9a-fA-F]{32}" placeholder="32 caracteres hex" />
-            <p class="field-hint">¿Dónde encuentro mi Zone ID? <a class="link" href="https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/" target="_blank" rel="noopener">Ver guía</a></p>
-          </label>
-          <label class="field">
-            <span>Dominio (zoneName)</span>
+            <span>Dominio</span>
             <input type="text" name="zoneName" required placeholder="example.com" />
           </label>
           <label class="field">
@@ -45,13 +40,14 @@ export function renderDashboardPage({ user }) {
           </label>
         </div>
         <div class="flag-grid" id="flag-grid">
-          <label class="flag"><input type="checkbox" name="expectMX" checked /> Verificar MX</label>
-          <label class="flag"><input type="checkbox" name="expectSPF" checked /> Verificar SPF</label>
-          <label class="flag"><input type="checkbox" name="expectDMARC" checked /> Verificar DMARC</label>
-          <label class="flag"><input type="checkbox" name="expectDKIM" checked /> Verificar DKIM</label>
-          <label class="flag"><input type="checkbox" name="expectCAA" /> Alertar sin CAA</label>
-          <label class="flag"><input type="checkbox" name="expectWeb" /> Web check (HTTPS)</label>
+          <label class="flag"><input type="checkbox" name="expectMX" checked disabled /> Verificar MX</label>
+          <label class="flag"><input type="checkbox" name="expectSPF" checked disabled /> Verificar SPF</label>
+          <label class="flag"><input type="checkbox" name="expectDMARC" checked disabled /> Verificar DMARC</label>
+          <label class="flag"><input type="checkbox" name="expectDKIM" checked disabled /> Verificar DKIM</label>
+          <label class="flag"><input type="checkbox" name="expectCAA" checked disabled /> Alertar sin CAA</label>
+          <label class="flag"><input type="checkbox" name="expectWeb" checked disabled /> Web check (HTTPS)</label>
         </div>
+        <p class="form-note">Todas las alertas están activas por defecto: MX, SPF, DMARC, DKIM, CAA y Web check.</p>
         <p class="form-note" id="secrets-note">🔐 El token se cifra con AES-256 y nunca se muestra de nuevo. Solo se usa para leer tus zonas.</p>
         <div class="form-actions">
           <button type="submit" class="btn pink" id="btn-save">Guardar dominio</button>
@@ -63,7 +59,6 @@ export function renderDashboardPage({ user }) {
     <section class="dash-section">
       <div class="dash-head-inline">
         <h2 class="dash-subtitle">Tus dominios</h2>
-        <span class="badge blue" id="quota-badge">0 / 3 dominios</span>
       </div>
       <div class="features-grid" id="domains-grid">
         <p class="empty-state" id="empty-state">Todavía no agregaste dominios. Hacé clic en "Agregar dominio" para empezar. 🚀</p>
@@ -95,8 +90,8 @@ export function renderDashboardPage({ user }) {
     const formPanel = document.getElementById("form-panel");
     const form = document.getElementById("domain-form");
     const formTitle = document.getElementById("form-title");
-    const quotaBadge = document.getElementById("quota-badge");
-    const QUOTA = 3;
+    
+    
 
     function esc(v) {
       return String(v ?? "").replace(/[&<>"']/g, (c) =>
@@ -217,7 +212,7 @@ export function renderDashboardPage({ user }) {
         grid.querySelectorAll(".domain-card").forEach((n) => n.remove());
         empty.hidden = domains.length > 0;
         domains.forEach(renderDomain);
-        quotaBadge.textContent = domains.length + " / " + QUOTA + " dominios";
+        
       } catch (err) {
         showErr(err.message);
       }
