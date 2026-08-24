@@ -9,6 +9,7 @@ import {
   getDomain,
   listDomains,
   listAlerts,
+  setUserCfToken,
   updateDomain,
 } from "../db.js";
 import { encryptSecret } from "../crypto.js";
