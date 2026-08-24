@@ -1076,6 +1076,40 @@ pre .ok {
   padding: 1.5rem;
 }
 
+/* ---- Inline form (agregar dominio en dashboard) ---- */
+.domain-form-inline {
+  background: var(--card);
+  border: 2px solid rgba(254, 152, 204, 0.3);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.domain-form-inline .inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.domain-form-inline .inline-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.domain-form-inline .inline-inputs .field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.domain-form-inline .inline-inputs .field input {
+  width: 100%;
+}
+
 /* ---- Dashboard ---- */
 .dash-wrap {
   max-width: 1400px;

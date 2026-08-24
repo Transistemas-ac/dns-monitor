@@ -9,50 +9,27 @@ export function renderDashboardPage({ user }) {
         <h1 class="dash-title">Tu monitor 🛰️</h1>
         <p class="dash-sub">Estado de tus dominios e historial de alertas. El monitor corre cada 10 minutos.</p>
       </div>
-      <button type="button" class="btn pink" id="btn-new">＋ Agregar dominio</button>
     </header>
 
     <div class="alert red" id="alert-err" hidden></div>
     <div class="alert green" id="alert-ok" hidden></div>
 
-    <section class="domain-form-card" id="form-panel" hidden>
-      <div class="head">
-        <span class="emoji">🌍</span>
-        <h3 id="form-title">Agregar dominio</h3>
-      </div>
-      <form id="domain-form" class="auth-form">
-        <input type="hidden" name="id" />
-        <div class="form-grid">
+    <section class="domain-form-inline">
+      <form id="domain-form" class="auth-form inline-form">
+        <div class="inline-inputs">
           <label class="field">
             <span>Dominio</span>
             <input type="text" name="zoneName" required placeholder="example.com" />
           </label>
           <label class="field">
-            <span>Token de Cloudflare</span>
+            <span>Token Cloudflare</span>
             <div class="pass-field">
               <input type="password" name="cfToken" id="cfToken" autocomplete="new-password" placeholder="Pegá tu token (solo lectura)" />
               <button type="button" class="pass-toggle" aria-label="Mostrar contraseña">👁️</button>
             </div>
           </label>
-          <label class="field">
-            <span>Días de alerta de vencimiento</span>
-            <input type="text" name="expiryAlertDays" value="60,30,14,7,1" placeholder="60,30,14,7,1" />
-          </label>
         </div>
-        <div class="flag-grid" id="flag-grid">
-          <label class="flag"><input type="checkbox" name="expectMX" checked disabled /> Verificar MX</label>
-          <label class="flag"><input type="checkbox" name="expectSPF" checked disabled /> Verificar SPF</label>
-          <label class="flag"><input type="checkbox" name="expectDMARC" checked disabled /> Verificar DMARC</label>
-          <label class="flag"><input type="checkbox" name="expectDKIM" checked disabled /> Verificar DKIM</label>
-          <label class="flag"><input type="checkbox" name="expectCAA" checked disabled /> Alertar sin CAA</label>
-          <label class="flag"><input type="checkbox" name="expectWeb" checked disabled /> Web check (HTTPS)</label>
-        </div>
-        <p class="form-note">Todas las alertas están activas por defecto: MX, SPF, DMARC, DKIM, CAA y Web check.</p>
-        <p class="form-note" id="secrets-note">🔐 El token se cifra con AES-256 y nunca se muestra de nuevo. Solo se usa para leer tus zonas.</p>
-        <div class="form-actions">
-          <button type="submit" class="btn pink" id="btn-save">Guardar dominio</button>
-          <button type="button" class="btn outline" id="btn-cancel">Cancelar</button>
-        </div>
+        <button type="submit" class="btn pink">Agregar</button>
       </form>
     </section>
 
@@ -61,7 +38,7 @@ export function renderDashboardPage({ user }) {
         <h2 class="dash-subtitle">Tus dominios</h2>
       </div>
       <div class="features-grid" id="domains-grid">
-        <p class="empty-state" id="empty-state">Todavía no agregaste dominios. Hacé clic en "Agregar dominio" para empezar. 🚀</p>
+        <p class="empty-state" id="empty-state">Todavía no agregaste dominios. Agregá uno arriba. 🚀</p>
       </div>
     </section>
 
@@ -87,15 +64,11 @@ export function renderDashboardPage({ user }) {
     const grid = document.getElementById("domains-grid");
     const empty = document.getElementById("empty-state");
     const errBox = document.getElementById("alert-err");
-    const formPanel = document.getElementById("form-panel");
     const form = document.getElementById("domain-form");
-    const formTitle = document.getElementById("form-title");
-    
-    
 
     function esc(v) {
       return String(v ?? "").replace(/[&<>"']/g, (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+        ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "'" }[c])
       );
     }
     function fmtTs(ts) {
@@ -160,7 +133,6 @@ export function renderDashboardPage({ user }) {
         '<div class="domain-row">🏷️ ' + esc(flags.join(", ") || "—") + "</div>" +
         '<div class="domain-actions">' +
         '<button type="button" class="btn blue btn-small" data-act="history" data-id="' + d.id + '">Historial</button>' +
-        '<button type="button" class="btn outline btn-small" data-act="edit" data-id="' + d.id + '">Editar</button>' +
         '<button type="button" class="btn red btn-small" data-act="delete" data-id="' + d.id + '">Eliminar</button>' +
         "</div>" +
         "</div>";
@@ -212,76 +184,25 @@ export function renderDashboardPage({ user }) {
         grid.querySelectorAll(".domain-card").forEach((n) => n.remove());
         empty.hidden = domains.length > 0;
         domains.forEach(renderDomain);
-        
       } catch (err) {
         showErr(err.message);
       }
     }
 
-    function resetFields() {
-      form.reset();
-      form.elements.id.value = "";
-      form.elements.cfToken.required = true;
-      form.elements.zoneId.disabled = false;
-      form.elements.zoneName.disabled = false;
-      document.getElementById("secrets-note").textContent =
-        "🔐 El token se cifra con AES-256 y nunca se muestra de nuevo. Solo se usa para leer tus zonas.";
-      formTitle.textContent = "Agregar dominio";
-      document.getElementById("btn-save").textContent = "Guardar dominio";
-    }
-
-    function resetForm() {
-      resetFields();
-      formPanel.hidden = true;
-    }
-
-    function openForm(domain) {
-      clearErr();
-      formPanel.hidden = false;
-      if (!domain) {
-        resetFields();
-        return;
-      }
-      form.elements.id.value = domain.id;
-      form.elements.zoneId.value = domain.zoneId;
-      form.elements.zoneName.value = domain.zoneName;
-      form.elements.expiryAlertDays.value = (domain.expiryAlertDays || []).join(",");
-      form.elements.expectMX.checked = domain.expectMX;
-      form.elements.expectSPF.checked = domain.expectSPF;
-      form.elements.expectDMARC.checked = domain.expectDMARC;
-      form.elements.expectDKIM.checked = domain.expectDKIM;
-      form.elements.expectCAA.checked = domain.expectCAA;
-      form.elements.expectWeb.checked = domain.expectWeb;
-      form.elements.cfToken.required = false;
-      form.elements.zoneId.disabled = true;
-      form.elements.zoneName.disabled = true;
-      document.getElementById("secrets-note").textContent =
-        "🔐 Dejá el campo de token vacío para mantener el actual. Completalo solo para rotarlo.";
-      formTitle.textContent = "Editar " + domain.zoneName;
-      document.getElementById("btn-save").textContent = "Guardar cambios";
-    }
-
+    const form = document.getElementById("domain-form");
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const id = form.elements.id.value;
       const payload = {
-        zoneId: form.elements.zoneId.value,
         zoneName: form.elements.zoneName.value,
         cfToken: form.elements.cfToken.value || undefined,
-        expiryAlertDays: String(form.elements.expiryAlertDays.value || "60,30,14,7,1")
-          .split(",").map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n)),
-        expectMX: form.elements.expectMX.checked,
-        expectSPF: form.elements.expectSPF.checked,
-        expectDMARC: form.elements.expectDMARC.checked,
-        expectDKIM: form.elements.expectDKIM.checked,
-        expectCAA: form.elements.expectCAA.checked,
-        expectWeb: form.elements.expectWeb.checked,
       };
       try {
         const path = id ? "/api/domains/" + id : "/api/domains";
         const method = id ? "PUT" : "POST";
         await api(path, { method, body: JSON.stringify(payload) });
-        resetForm();
+        form.reset();
+        form.elements.id.value = "";
         await loadDomains();
       } catch (err) {
         showErr(err.message);
@@ -299,10 +220,7 @@ export function renderDashboardPage({ user }) {
       if (!btn) return;
       const id = btn.dataset.id;
       try {
-        if (btn.dataset.act === "edit") {
-          const { domains } = await api("/api/domains");
-          openForm(domains.find((d) => String(d.id) === String(id)));
-        } else if (btn.dataset.act === "delete") {
+        if (btn.dataset.act === "delete") {
           const { domains } = await api("/api/domains");
           const d = domains.find((x) => String(x.id) === String(id));
           if (d && confirm("¿Eliminar " + d.zoneName + "? Se borran sus snapshots y su historial.")) {
@@ -364,9 +282,6 @@ export function renderDashboardPage({ user }) {
     document.getElementById("btn-close-alerts").addEventListener("click", () => {
       document.getElementById("alerts-section").hidden = true;
     });
-
-    document.getElementById("btn-new").addEventListener("click", () => openForm(null));
-    document.getElementById("btn-cancel").addEventListener("click", resetForm);
 
     document.addEventListener("click", (ev) => {
       if (!ev.target.closest(".emoji-picker") && !ev.target.closest("[data-emoji-open]")) {
