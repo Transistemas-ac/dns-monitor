@@ -886,6 +886,11 @@ pre .ok {
   padding: 4rem 1rem 5rem;
 }
 
+.auth-wrap-top {
+  align-items: flex-start;
+  padding-top: 9rem;
+}
+
 .auth-card {
   width: 100%;
   max-width: 480px;
