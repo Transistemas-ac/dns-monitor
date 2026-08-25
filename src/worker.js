@@ -136,6 +136,10 @@ async function handleFetch(request, env) {
       return handleApiChannels(env, request, user);
     }
 
+    if (url.pathname === "/api/alerts") {
+      return handleApiAlerts(env, request, user, null);
+    }
+
     const match = url.pathname.match(/^\/api\/domains\/(\d+)(\/alerts)?$/);
     if (match) {
       if (match[2]) return handleApiAlerts(env, request, user, match[1]);

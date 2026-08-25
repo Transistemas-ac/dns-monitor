@@ -15,6 +15,7 @@ import {
 } from "../db.js";
 import { decryptSecret, encryptSecret } from "../crypto.js";
 import { jsonError, jsonOk } from "../auth.js";
+import buildDomainSummary from "./domainSummary.js";
 
 const ZONE_ID_RE = /^[0-9a-f]{32}$/i;
 
@@ -117,7 +118,14 @@ function flagsFromBody(body, existing) {
 export async function handleApiDomains(env, request, user) {
   if (request.method === "GET") {
     const domains = await listDomains(env, user.id);
-    return jsonOk({ domains: domains.map(maskSecrets) });
+    const summaries = await Promise.all(
+      domains.map((d) => buildDomainSummary(env, d.zone_id).catch(() => null))
+    );
+    const result = domains.map((d, i) => ({
+      ...maskSecrets(d),
+      summary: summaries[i],
+    }));
+    return jsonOk({ domains: result });
   }
 
   if (request.method === "POST") {
@@ -218,26 +226,53 @@ export async function handleApiDomainItem(env, request, user, id) {
 export async function handleApiAlerts(env, request, user, domainId) {
   if (request.method !== "GET") return jsonError(405, "Método no permitido.");
 
-  const parsedId = parseInt(domainId, 10);
-  if (!Number.isInteger(parsedId)) return jsonError(400, "ID inválido.");
-  const domain = await getDomain(env, parsedId, user.id);
-  if (!domain) return jsonError(404, "Dominio no encontrado.");
-
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10) || 1);
   const perPage = Math.min(50, Math.max(5, parseInt(url.searchParams.get("per_page") || "20", 10) || 20));
 
-  const { alerts, total } = await listAlerts(env, {
+  if (domainId) {
+    const parsedId = parseInt(domainId, 10);
+    if (!Number.isInteger(parsedId)) return jsonError(400, "ID inválido.");
+    const domain = await getDomain(env, parsedId, user.id);
+    if (!domain) return jsonError(404, "Dominio no encontrado.");
+
+    const { alerts: rows, total } = await listAlerts(env, {
+      userId: user.id,
+      domainId: parsedId,
+      page,
+      perPage,
+    });
+
+    return jsonOk({
+      domain: maskSecrets(domain),
+      alerts: rows.map((a) => ({
+        id: a.id,
+        subject: a.subject,
+        createdAt: a.created_at,
+      })),
+      total,
+      page,
+      perPage,
+    });
+  }
+
+  /* Sin domainId: historial global con filtro opcional por múltiples dominios */
+  const domainIdsParam = url.searchParams.get("domain_ids");
+  const domainIds = domainIdsParam
+    ? domainIdsParam.split(",").map((s) => parseInt(s, 10)).filter((n) => Number.isInteger(n) && n > 0)
+    : [];
+
+  const { alerts: rows, total } = await listAlerts(env, {
     userId: user.id,
-    domainId: parsedId,
+    domainIds,
     page,
     perPage,
   });
 
   return jsonOk({
-    domain: maskSecrets(domain),
-    alerts: alerts.map((a) => ({
+    alerts: rows.map((a) => ({
       id: a.id,
+      domainId: a.domain_id,
       subject: a.subject,
       createdAt: a.created_at,
     })),

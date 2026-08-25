@@ -168,12 +168,22 @@ export async function insertAlert(env, { domainId, userId, subject, sections }) 
     .run();
 }
 
-export async function listAlerts(env, { userId, domainId, page = 1, perPage = 20 }) {
+export async function listAlerts(env, { userId, domainId, domainIds, page = 1, perPage = 20 }) {
   const offset = (page - 1) * perPage;
-  const whereClause = domainId
-    ? "domain_id = ? AND user_id = ?"
-    : "user_id = ?";
-  const params = domainId ? [domainId, userId] : [userId];
+  let whereClause;
+  let params;
+
+  if (domainIds && domainIds.length > 0) {
+    const placeholders = domainIds.map(() => "?").join(",");
+    whereClause = `user_id = ? AND domain_id IN (${placeholders})`;
+    params = [userId, ...domainIds];
+  } else if (domainId) {
+    whereClause = "domain_id = ? AND user_id = ?";
+    params = [domainId, userId];
+  } else {
+    whereClause = "user_id = ?";
+    params = [userId];
+  }
 
   const { results } = await env.DB.prepare(
     `SELECT id, domain_id, subject, created_at
