@@ -4,6 +4,7 @@ import { appShell, esc } from "./shell.js";
 
 export function renderAlertsPage({ user }) {
 const content = `
+    <div class="dash-top">
     <header class="dash-head">
       <div>
         <h1 class="dash-title">Alertas 🔔</h1>
@@ -13,6 +14,7 @@ const content = `
 
     <div class="alert red" id="alert-err" hidden></div>
     <div class="alert green" id="alert-ok" hidden></div>
+    </div>
 
     <section class="dash-section">
       <div class="dash-head-inline">

@@ -6,6 +6,7 @@ export function renderTokenPage({ user }) {
   const hasToken = !!(user.cf_token_enc && user.cf_token_iv);
 
   const content = `
+    <div class="dash-top">
     <header class="dash-head">
       <div>
         <h1 class="dash-title">Token Cloudflare 🔑</h1>
@@ -15,6 +16,7 @@ export function renderTokenPage({ user }) {
 
     <div class="alert red" id="alert-err" hidden></div>
     <div class="alert green" id="alert-ok" hidden></div>
+    </div>
 
     <section class="dash-section">
       <div class="dash-head-inline">
