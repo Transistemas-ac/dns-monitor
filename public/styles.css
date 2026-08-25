@@ -1087,7 +1087,9 @@ pre .ok {
 
 .token-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 0.75rem;
   margin-top: 1.25rem;
@@ -1473,6 +1475,12 @@ pre .ok {
   .dash-top > .domain-form-inline,
   .dash-top > .alert {
     max-width: none;
+  }
+  .token-actions {
+    flex-direction: column;
+  }
+  .token-actions .btn {
+    width: 100%;
   }
   .domain-form-inline {
     max-width: none;
