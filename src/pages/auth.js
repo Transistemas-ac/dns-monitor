@@ -1,5 +1,7 @@
 /* ===== Páginas de autenticación (server-rendered, design system de la landing) ===== */
 
+import { appShell } from "./shell.js";
+
 function esc(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -225,11 +227,12 @@ export function renderForgotPage({ error, email, sent }) {
 }
 
 export function renderChangePasswordPage({ user, error }) {
-  return shell({
+  return appShell({
     title: "Cambiar contraseña — DNS Monitor",
     user,
-    wrapClass: "auth-wrap-top",
+    active: "",
     content: `
+      <div class="auth-wrap-top">
       <section class="auth-card blue">
         <span class="auth-emoji">🔐</span>
         <h1>Cambiar contraseña</h1>
@@ -265,7 +268,7 @@ export function renderChangePasswordPage({ user, error }) {
         </form>
         <p class="auth-foot"><a class="link" href="/app">Volver al dashboard</a></p>
       </section>
-      ${wordmarkRainbow()}
+      </div>
     `,
   });
 }

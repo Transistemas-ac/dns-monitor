@@ -887,7 +887,9 @@ pre .ok {
 }
 
 .auth-wrap-top {
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding-top: 9rem;
 }
 
@@ -1468,7 +1470,7 @@ pre .ok {
     grid-template-columns: 1fr;
   }
   .auth-wrap-top {
-    align-items: flex-start;
+    align-items: center;
     padding-top: 7rem;
   }
   .auth-card {
